@@ -1,0 +1,6 @@
+{
+  "name": "Go with Ahmed Travel Hub",
+  "description": "A bilingual travel files builder, second-by-second AI travel planner, flight & hotel simulation ticket generator, and free events & museums ticket directory.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
