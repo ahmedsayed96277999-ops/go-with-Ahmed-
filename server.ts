@@ -6,9 +6,8 @@ import { createServer as createViteServer } from "vite";
 
 dotenv.config();
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
 
   app.use(express.json());
 
@@ -983,11 +982,12 @@ Format response as a JSON object matching requested schema. Respond in ${lang}. 
 // UI Serving / Vite Middleware Setup
 // ----------------------------------------------------
 if (process.env.NODE_ENV !== "production") {
-  const vite = await createViteServer({
+  createViteServer({
     server: { middlewareMode: true },
     appType: "spa",
+  }).then((vite) => {
+    app.use(vite.middlewares);
   });
-  app.use(vite.middlewares);
 } else {
   const distPath = path.join(process.cwd(), "dist");
   app.use(express.static(distPath));
@@ -996,9 +996,10 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
+if (process.env.VERCEL !== "1") {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server is running beautifully on http://0.0.0.0:${PORT}`);
   });
 }
 
-startServer();
+export default app;
