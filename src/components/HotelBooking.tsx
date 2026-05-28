@@ -1,15 +1,29 @@
-import React, { useState } from "react";
-import { Landmark, Calendar, User, Search, MapPin, Printer, Star, ArrowUpRight, ShieldCheck, CheckCircle2, BedDouble, UserPlus, UserMinus } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Landmark, Calendar, User, Search, MapPin, Printer, Star, ArrowUpRight, ShieldCheck, CheckCircle2, BedDouble, UserPlus, UserMinus, Smartphone, Sparkles, MessageSquare } from "lucide-react";
 import { Language, HotelOption } from "../types";
 import { translations } from "../utils/translations";
 import { generateHotelVoucherPDF } from "../utils/pdfGenerator";
 
 interface HotelBookingProps {
   lang: Language;
+  theme?: "dark" | "light";
 }
 
-export default function HotelBooking({ lang }: HotelBookingProps) {
+export default function HotelBooking({ lang, theme = "dark" }: HotelBookingProps) {
   const t = translations[lang];
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const playClick = () => {
+    try {
+      if ((window as any).gwaPlayClick) {
+        (window as any).gwaPlayClick();
+      }
+    } catch(e){}
+  };
+
   const [destination, setDestination] = useState(lang === "ar" ? "باريس، فرنسا" : "Paris, France");
   const [checkIn, setCheckIn] = useState("2026-06-15");
   const [checkOut, setCheckOut] = useState("2026-06-22");
@@ -136,6 +150,83 @@ export default function HotelBooking({ lang }: HotelBookingProps) {
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {/* Premium Exclusive Hotel.info Promotional Banner */}
+      <div id="hotel-info-free-booking-banner" className={`rounded-3xl p-6 md:p-8 border transition-all duration-300 relative overflow-hidden shadow-xl ${
+        theme === "dark" 
+          ? "bg-gradient-to-br from-amber-950/40 via-[#100c24] to-purple-950/30 border-amber-600/30 text-amber-100" 
+          : "bg-gradient-to-br from-amber-500/10 via-white to-purple-500/5 border-amber-500/20 text-slate-800"
+      }`}>
+        {/* Ambient absolute glows */}
+        <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="flex flex-col lg:flex-row items-center gap-6 justify-between relative z-10">
+          <div className="space-y-4 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-amber-400 font-extrabold bg-amber-950/85 px-2.5 py-1 rounded-full border border-amber-500/30 uppercase animate-pulse">
+                <Sparkles className="w-3 h-3 text-amber-405" />
+                {lang === "ar" ? "ثغرة قنصلية للمسافرين" : "Consular Exclusive backdoor"}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-emerald-400 font-extrabold bg-emerald-950/85 px-2.5 py-1 rounded-full border border-emerald-500/30 uppercase">
+                {lang === "ar" ? "حجز مؤكد بدون بطاقة" : "Real Confirmed Booking"}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-indigo-400 font-extrabold bg-indigo-950/85 px-2.5 py-1 rounded-full border border-indigo-500/30 uppercase">
+                {lang === "ar" ? "إرسال رسالة SMS فورية" : "Instant SMS Notification"}
+              </span>
+            </div>
+
+            <h2 className={`text-lg md:text-2xl font-black leading-snug tracking-tight ${
+              theme === "dark" ? "text-amber-300" : "text-amber-800"
+            }`}>
+              {lang === "ar" 
+                ? "طريقة حجز فندقي مؤكد 100% بدون دفع مسبق وبدون بطاقة ائتمان (فيزا كارد) عبر منصة Hotel.info!" 
+                : "100% Free Confirmed Hotel Booking Without Credit Card + Instant SMS Confirmation via Hotel.info!"}
+            </h2>
+
+            <p className={`text-xs md:text-sm leading-relaxed ${
+              theme === "dark" ? "text-slate-300" : "text-slate-600"
+            }`}>
+              {lang === "ar"
+                ? "هل تبحث عن حجز فندقي حقيقي وموثق تقبله القنصليات لفيزا الشنجن والمطارات دون دفع مسبق ودون إدخال أية بيانات فيزا كارد؟ يوفر لك موقع Hotel.info العالمي هذه الميزة الأسطورية! بمجرد إتمام حجزك المجاني، ستحصل على مستند حجز رسمي، بالإضافة إلى إرسال رسالة نصية SMS فورية على هاتفك المحمول لتأكيد موعدك وموقع الإقامة لضمان عبور آمن وعرضه أمام القنصل ومكاتب الأمن."
+                : "Looking for a real, legal hotel reservation accepted by Schengen embassies and airlines without paying in advance or typing any credit card credentials? Hotel.info provides this phenomenal backdoor feature! Once you make your free booking, they instantly dispatch an official SMS text reminder straight to your phone confirming your room status to guarantee pure confidence at submission & check-in."}
+            </p>
+
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm font-semibold pt-1 ${
+              theme === "dark" ? "text-slate-200" : "text-slate-700"
+            }`}>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>{lang === "ar" ? "حجز معتمد بطلب مؤكد ورقم حجز حقيقي" : "Official verification code with live booking ID"}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>{lang === "ar" ? "آمن تماماً - لا يتطلب إدخال فيزا كارد أو حساب بنكي" : "Guaranteed secure - zero credit card requirements"}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>{lang === "ar" ? "إرسال رسالة تأكيد SMS فورية لهاتفك بالكامل لتأكيد جدية السفر" : "Instant SMS delivered directly to Egyptian / international numbers"}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <span>{lang === "ar" ? "مقبول لدى مكاتب TLScontact و VFS Global و السفارات مباشرة" : "Fully accepted by prime VFS Global, TLS contact centers"}</span>
+              </div>
+            </div>
+
+            <div className="pt-3">
+              <a
+                href="https://www.hotel.info/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-black text-xs md:text-sm shadow-lg shadow-amber-950/20 active:scale-95 transition-all"
+              >
+                <span>{lang === "ar" ? "احجز مجاناً الآن عبر موقع Hotel.info" : "Book For Free Now on Hotel.info"}</span>
+                <ArrowUpRight className="w-4 h-5 animate-pulse" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Flight header banner */}
       <div className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-md">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
@@ -225,6 +316,7 @@ export default function HotelBooking({ lang }: HotelBookingProps) {
             <button
               type="submit"
               disabled={loading}
+              onClick={playClick}
               className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold transition-all shadow-sm flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -257,6 +349,7 @@ export default function HotelBooking({ lang }: HotelBookingProps) {
                   href={portal.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={playClick}
                   className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all shadow-sm hover:scale-105 active:scale-95 ${portal.color}`}
                 >
                   <span>{portal.name}</span>
@@ -346,7 +439,7 @@ export default function HotelBooking({ lang }: HotelBookingProps) {
                       </div>
                       
                       <button
-                        onClick={() => handleIssueVoucher(hotel)}
+                        onClick={() => { handleIssueVoucher(hotel); playClick(); }}
                         className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 ${
                           selectedHotel?.id === hotel.id
                             ? "bg-slate-800 text-white"
@@ -441,6 +534,7 @@ export default function HotelBooking({ lang }: HotelBookingProps) {
                           id="btn-add-companion-guest"
                           onClick={() => {
                             setActiveGuestFields(prev => prev + 1);
+                            playClick();
                           }}
                           className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 hover:text-emerald-950 border border-emerald-200/50 rounded-xl text-xs font-bold transition-all shadow-sm"
                         >
@@ -459,6 +553,7 @@ export default function HotelBooking({ lang }: HotelBookingProps) {
                               setGuest2Name("");
                             }
                             setActiveGuestFields(prev => prev - 1);
+                            playClick();
                           }}
                           className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 border border-rose-200/50 rounded-xl text-xs font-bold transition-all"
                         >
@@ -568,6 +663,7 @@ export default function HotelBooking({ lang }: HotelBookingProps) {
                     <div className="md:col-span-2 pt-2">
                       <button
                         type="submit"
+                        onClick={playClick}
                         className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold transition-all shadow-md flex items-center justify-center gap-2"
                       >
                         <Printer className="w-5 h-5" />

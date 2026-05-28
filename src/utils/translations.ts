@@ -1,9 +1,9 @@
 export const translations = {
   en: {
-    title: "Go with Ahmed",
+    title: "Go with Ahmed Prime",
     subtitle: "Your AI-tailored world tour files builder, boarding passes, and hotel confirmations generator",
     downloadBadgeTitle: "Direct App Download",
-    downloadBadgeDesc: "Download Go with Ahmed Premium client app directly (.APK) for your Android or iOS devices for offline access and airport boarding scans.",
+    downloadBadgeDesc: "Download Go with Ahmed Prime client app directly (.APK) for your Android or iOS devices for offline access and airport boarding scans.",
     downloadApkBtn: "Download Android App (.APK)",
     downloadIosBtn: "Get iOS App (Web-Clip)",
     navPlanner: "AI Itinerary Planner",
@@ -111,15 +111,15 @@ export const translations = {
 
     // General
     backToDashboard: "Main Screen Dashboard",
-    downloadBadgeActive: "Go with Ahmed Premium - Connected",
+    downloadBadgeActive: "Go with Ahmed Prime - Connected",
     arRtlActive: "RTL active",
-    alertMissingAi: "AI Plan generation is currently running on a responsive smart generator because GEMINI_API_KEY is not defined. Set it in Secrets to unlock real Gemini content!"
+    alertMissingAi: "AI Plan generation is currently running on safe fallback because GEMINI_API_KEY is not defined. Add 'GEMINI_API_KEY' under your Vercel or hosting Environment Variables to unlock real-time Gemini AI!"
   },
   ar: {
-    title: "Go with Ahmed",
+    title: "Go with Ahmed Prime",
     subtitle: "مخطط سياحي فوري بالذكاء الاصطناعي، ومولد تذاكر طيران وهمية وقسائم الفنادق والمتاحف مجاناً",
     downloadBadgeTitle: "التحميل المباشر للتطبيق",
-    downloadBadgeDesc: "قم بتحميل تطبيق Go with Ahmed بريميوم مباشرة بصيغة (.APK) لأجهزة أندرويد وآي أو إس للوصول الفوري بدون إنترنت لمستنداتك وملفاتك السياحية.",
+    downloadBadgeDesc: "قم بتحميل تطبيق Go with Ahmed Prime مباشرة بصيغة (.APK) لأجهزة أندرويد وآي أو إس للوصول الفوري بدون إنترنت لمستنداتك وملفاتك السياحية.",
     downloadApkBtn: "تحميل تطبيق أندرويد (.APK)",
     downloadIosBtn: "تثبيت تطبيق آبل (ويب كليب)",
     navPlanner: "مخطط الرحلات الذكي",
@@ -227,8 +227,8 @@ export const translations = {
 
     // General
     backToDashboard: "رجوع للشاشة الرئيسية للوحة التحكم",
-    downloadBadgeActive: "Go with Ahmed - متصل ومتاح للتنزيل",
+    downloadBadgeActive: "Go with Ahmed Prime - متصل ومتاح للتنزيل",
     arRtlActive: "تفعيل الاتجاه العربي",
-    alertMissingAi: "يتم إنشاء الخطة السياحية الآن عن طريق محلل محلي ذكي فوري لعدم توفر مفتاح Gemini API. ضع مفتاحك في قسم الأسرار للحصول على عوالم الذكاء الاصطناعي الكامل للأماكن!"
+    alertMissingAi: "يتم إنشاء الخطة السياحية الآن عن طريق محلل محلي ذكي فوري لعدم توفر مفتاح Gemini API. يرجى إضافة 'GEMINI_API_KEY' كمتغير بيئي (Environment Variable) في إعدادات موقع Vercel لتفعيل عوالم الذكاء الاصطناعي الكامل للأماكن!"
   }
 };

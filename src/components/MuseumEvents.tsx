@@ -1,8 +1,107 @@
 import React, { useState } from "react";
-import { Landmark, Ticket, HelpCircle, MapPin, Sparkles, Printer, Search, Calendar, ChevronRight, ArrowUpRight, Award, CheckCircle2, User } from "lucide-react";
+import { Landmark, Ticket, HelpCircle, MapPin, Sparkles, Printer, Search, Calendar, ChevronRight, ArrowUpRight, Award, CheckCircle2, User, Compass, Users, Briefcase } from "lucide-react";
 import { Language, MuseumEventsData, MuseumItem } from "../types";
 import { translations } from "../utils/translations";
 import { generateMuseumPassPDF } from "../utils/pdfGenerator";
+
+const GLOBAL_PLATFORMS = [
+  {
+    id: "whichmuseum",
+    nameEn: "WhichMuseum Free Admission Guide",
+    nameAr: "دليل المتاحف - WhichMuseum",
+    costEn: "Museum Entry Finder",
+    costAr: "دليل تذاكر المتاحف المجانية",
+    categoryEn: "Free Tickets",
+    categoryAr: "متاحف وتذاكر",
+    descEn: "Locate entirely free museums, zero-cost days, and pass waivers in global capitals.",
+    descAr: "اضغط للبحث عن المتاحف المجانية تماماً بالمدن العالمية وأيام الدخول المفتوح للجمهور وساعات الإعفاء.",
+    url: "https://whichmuseum.com/place/europe-18287/free",
+    iconName: "Landmark",
+    iconClass: "bg-rose-100 text-rose-600 border border-rose-200/50",
+    badgeClass: "bg-rose-50 text-rose-800 border-rose-100",
+    actionEn: "Search Free Museums",
+    actionAr: "تصفح متاحف أوروبا والوجهات"
+  },
+  {
+    id: "sandemans",
+    nameEn: "Sandemans New Europe Tours",
+    nameAr: "جولات سانديمانز - Sandemans",
+    costEn: "Free Walking Tours",
+    costAr: "جولات مشي ممتازة بالمرشد",
+    categoryEn: "Guided Tours",
+    categoryAr: "جولات بالمرشد",
+    descEn: "The premier network for booking free walking tours across major European cities with certified guides.",
+    descAr: "احجز جولتك المروية الممتعة لتستكشف أهم معالم وسط البلد والقصص التراثية بصحبة مرشدين متميزين.",
+    url: "https://www.neweuropetours.eu/budapest-walking-tours/",
+    iconName: "Compass",
+    iconClass: "bg-emerald-100 text-emerald-600 border border-emerald-200/50",
+    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-100",
+    actionEn: "Book Free City Tour",
+    actionAr: "حجز جولة سانديمانز للمشي"
+  },
+  {
+    id: "guruwalk",
+    nameEn: "GuruWalk Volunteer Guides",
+    nameAr: "جولات الدليل الحر - GuruWalk",
+    costEn: "Local Volunteer Walk",
+    costAr: "مرشد محلي سياحي متطوع",
+    categoryEn: "Volunteer Tours",
+    categoryAr: "مرشدون محليون",
+    descEn: "Universal marketplace for pay-what-you-wish walking tours with native guides in 100+ countries.",
+    descAr: "جولات مخصصة وتجول بالهواء الطلق مع سكان محليين ومرشدين في كافة ربوع العالم ومختلف الدول لميزانيتك.",
+    url: "https://www.guruwalk.com/?ref=wsx1xymxspth05suq3y3&ref_campaign=15312872088__home__en_free-walking-tour_130357236656_pf00&ref=wsx1xymxspth05suq3y3&pf=pf00&cid=15312872088&pid=&stg=home&pl=&lg=en&ag=free-walking-tour&agid=130357236656&loc=9063015&gad_source=1&gad_campaignid=15312872088&gbraid=0AAAAADMAfcU3xcG2_npvJZDAfI9Kd7a6q&gclid=CjwKCAjwrNrQBhBjEiwAoR4VO5lJFKMkMRDWiYiqJscG0FmADLxVKNumSRTXvti5wR3G76b4_9nHuRoCz8sQAvD_BwE",
+    iconName: "Users",
+    iconClass: "bg-amber-100 text-amber-600 border border-amber-200/50",
+    badgeClass: "bg-amber-50 text-amber-800 border-amber-100",
+    actionEn: "Explore GuruWalk Guides",
+    actionAr: "حجز جولة محلية مجانية"
+  },
+  {
+    id: "eventbrite",
+    nameEn: "Eventbrite Concerts & Shows",
+    nameAr: "الفعاليات والحفلات - Eventbrite",
+    costEn: "Local Community Shows",
+    costAr: "حفلات غنائية وايفنتات حية",
+    categoryEn: "Live Shows",
+    categoryAr: "كرنفالات وموسيقى",
+    descEn: "Find active live concerts, localized festivals, free meetups, and open-mic gatherings in your town.",
+    descAr: "المنصة الرائدة دولياً لاستعراض تذاكر الأنشطة الفنية والعروض والمهرجانات الحية والتجمعات الاجتماعية.",
+    url: "https://www.eventbrite.com/",
+    iconName: "Sparkles",
+    iconClass: "bg-orange-100 text-orange-600 border border-orange-200/50",
+    badgeClass: "bg-orange-50 text-orange-800 border-orange-100",
+    actionEn: "Search Eventbrite Events",
+    actionAr: "معاينة الفعاليات والحفلات"
+  },
+  {
+    id: "eventseye",
+    nameEn: "EventsEye Trade Exhibitions",
+    nameAr: "معارض الأعمال والبزنس - EventsEye",
+    costEn: "Global Business Expo",
+    costAr: "معارض تجارية للمستثمرين وبزنس",
+    categoryEn: "Business Summit",
+    categoryAr: "معارض وإكسبو",
+    descEn: "Direct access to the primary listing directory for global trade fairs, commercial expos, and conventions.",
+    descAr: "تصفح أجندة معارض التجارة والأعمال، المعارض الفنية والمهنية الكبرى في أي مدينة بالعالم مجاناً.",
+    url: "https://www.eventseye.com/",
+    iconName: "Briefcase",
+    iconClass: "bg-indigo-100 text-indigo-600 border border-indigo-200/50",
+    badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-100",
+    actionEn: "View Trade Fairs List",
+    actionAr: "تصفح معارض الأعمال الدولية"
+  }
+];
+
+const getIconComponent = (name: string) => {
+  switch (name) {
+    case "Landmark": return <Landmark className="w-5 h-5 flex-shrink-0" />;
+    case "Compass": return <Compass className="w-5 h-5 flex-shrink-0" />;
+    case "Users": return <Users className="w-5 h-5 flex-shrink-0" />;
+    case "Sparkles": return <Sparkles className="w-5 h-5 flex-shrink-0" />;
+    case "Briefcase": return <Briefcase className="w-5 h-5 flex-shrink-0" />;
+    default: return <Ticket className="w-5 h-5 flex-shrink-0" />;
+  }
+};
 
 interface MuseumEventsProps {
   lang: Language;
@@ -23,6 +122,63 @@ export default function MuseumEvents({ lang }: MuseumEventsProps) {
   const [selectedMuseum, setSelectedMuseum] = useState("");
   const [visitDate, setVisitDate] = useState("2026-06-15");
   const [visitTime, setVisitTime] = useState("Morning (10:00 AM - 01:00 PM)");
+
+  const renderGlobalPlatformsGrid = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {GLOBAL_PLATFORMS.map((plat) => {
+          const isAr = lang === "ar";
+          return (
+            <div
+              key={plat.id}
+              className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between hover:-translate-y-0.5"
+            >
+              <div className="space-y-4">
+                {/* Visual Header Fusing Icon and Tag on it */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-2.5 rounded-xl ${plat.iconClass} flex items-center justify-center transition-transform hover:scale-105`}>
+                      {getIconComponent(plat.iconName)}
+                    </div>
+                    {/* Brand Name */}
+                    <span className="text-xs font-black text-slate-800 tracking-tight">
+                      {isAr ? plat.nameAr.split(" - ")[1] : plat.nameEn.split(" Platform")[0].split(" Elite")[0].split(" Festive")[0]}
+                    </span>
+                  </div>
+                  
+                  {/* Fused label pill */}
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${plat.badgeClass}`}>
+                    {isAr ? plat.costAr : plat.costEn}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <h4 className="text-sm font-extrabold text-slate-800">
+                    {isAr ? plat.nameAr : plat.nameEn}
+                  </h4>
+                  <p className="text-slate-550 text-xs leading-relaxed font-semibold">
+                    {isAr ? plat.descAr : plat.descEn}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-4 mt-3 border-t border-slate-50">
+                <a
+                  href={plat.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 bg-slate-50 hover:bg-rose-50 border border-slate-200/50 hover:border-rose-200 text-slate-700 hover:text-rose-700 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5"
+                >
+                  <span>{isAr ? plat.actionAr : plat.actionEn}</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const handleSearchCulture = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,13 +344,29 @@ export default function MuseumEvents({ lang }: MuseumEventsProps) {
           )}
 
           {!loading && !data && (
-            <div className="bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 p-12 text-center min-h-[400px] flex flex-col items-center justify-center">
-              <Ticket className="w-14 h-14 text-slate-300 stroke-1 mb-4" />
-              <p className="text-slate-500 text-sm max-w-[280px] leading-relaxed">
-                {lang === "ar"
-                  ? "أدخل الدولة والمدينة للتعرف على أوقات الدخول المجاني للمتاحف، ايفنت برايت، واستخراج تذكرتك المجانية!"
-                  : "Insert target city and country on the explorer column to search free entries and local cultural passes!"}
-              </p>
+            <div className="space-y-8 animate-fade-in">
+              <div className="bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 p-8 text-center flex flex-col items-center justify-center">
+                <Ticket className="w-12 h-12 text-slate-300 stroke-1 mb-3" />
+                <p className="text-slate-500 text-xs sm:text-sm max-w-[420px] leading-relaxed font-semibold">
+                  {lang === "ar"
+                    ? "أدخل الدولة والمدينة على اليمين للبحث الثقافي الدقيق وحيل الحجز المجاني، أو استكشف المنصات العالمية المباشرة بالأسفل!"
+                    : "Insert target city and country to search free museum entries and local cultural passes, or explore direct global directories below!"}
+                </p>
+              </div>
+
+              {/* Verified platforms grid - Always visible before search */}
+              <div className="space-y-4">
+                <div className="border-l-4 border-rose-600 pl-3 rtl:border-l-0 rtl:border-r-4 rtl:pr-3 py-1">
+                  <h3 className="text-sm font-extrabold text-slate-800">
+                    {lang === "ar" ? "المنصات العالمية الشريكة والموثوقة للتذاكر والجولات" : "Verified International Platforms for Free Tickets & Guided Tours"}
+                  </h3>
+                  <p className="text-slate-400 text-xs font-semibold mt-0.5">
+                    {lang === "ar" ? "أهم البوابات الموثوقة لحجز متاحف مجانية، جولات مشي مع مرشدين بامتياز، ومعارض أعمال" : "Direct verified platforms to locate zero-cost museum hours, join voluntary walking guides and business expos"}
+                  </p>
+                </div>
+                
+                {renderGlobalPlatformsGrid()}
+              </div>
             </div>
           )}
 
@@ -282,27 +454,58 @@ export default function MuseumEvents({ lang }: MuseumEventsProps) {
 
               {/* Sub-tab 2: Platforms Eventbrite/Meetup guidelines */}
               {activeSubTab === "platforms" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {data.eventsPlatforms.map((plat, idx) => (
-                    <div key={idx} className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4 flex flex-col justify-between">
-                      <div className="space-y-3">
-                        <span className="inline-block px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold font-sans">
-                          {plat.platform}
-                        </span>
+                <div className="space-y-8">
+                  {/* Global Platforms Segment */}
+                  <div className="space-y-4">
+                    <div className="border-l-4 border-rose-600 pl-3 rtl:border-l-0 rtl:border-r-4 rtl:pr-3 py-1">
+                      <h4 className="text-sm md:text-base font-extrabold text-slate-800">
+                        {lang === "ar" ? "المنصات العالمية الشريكة والموثوقة للتذاكر والجولات" : "Verified Global Channels for Direct Tickets & Free Tours"}
+                      </h4>
+                      <p className="text-slate-400 text-xs font-semibold mt-0.5">
+                        {lang === "ar" ? "أهم المواقع المعترف بها دولياً لحجز المتاحف مجاناً وجولات المشي مع مرشدين سياحيين" : "World-leading direct entry desks for museum admission waivers, walking guides and exhibitions"}
+                      </p>
+                    </div>
+                    {renderGlobalPlatformsGrid()}
+                  </div>
+
+                  {/* Local Platforms Segment from search */}
+                  {data.eventsPlatforms && data.eventsPlatforms.length > 0 && (
+                    <div className="space-y-4 pt-6 border-t border-slate-100">
+                      <div className="border-l-4 border-slate-800 pl-3 rtl:border-l-0 rtl:border-r-4 rtl:pr-3 py-1">
                         <h4 className="text-sm md:text-base font-extrabold text-slate-800">
-                          {lang === "ar" ? `الحصول على فعاليات من ${plat.platform}` : `Free Community coordination via ${plat.platform}`}
+                          {lang === "ar" 
+                            ? `توصيات ومعايير البحث المخصصة لوجهتك (${data.city || data.country})` 
+                            : `Localized Filtering Guidelines for Your Destination (${data.city || data.country})`}
                         </h4>
-                        <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">
-                          {plat.guide}
+                        <p className="text-slate-400 text-xs font-semibold mt-0.5">
+                          {lang === "ar" ? "خطوات فلترة وعرض الأنشطة مجاتاً في المجموعات البلدية المحلية" : "Steps to locate free community listings and council gatherings for this specific zone"}
                         </p>
                       </div>
-                      
-                      <div className="pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-bold text-slate-800">
-                        <span>{t.howToFilter}</span>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {data.eventsPlatforms.map((plat, idx) => (
+                          <div key={idx} className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4 flex flex-col justify-between">
+                            <div className="space-y-3">
+                              <span className="inline-block px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold font-sans">
+                                {plat.platform}
+                              </span>
+                              <h5 className="text-sm md:text-base font-extrabold text-slate-800">
+                                {lang === "ar" ? `الحصول على فعاليات من ${plat.platform}` : `Free Community coordination via ${plat.platform}`}
+                              </h5>
+                              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-semibold">
+                                {plat.guide}
+                              </p>
+                            </div>
+                            
+                            <div className="pt-4 border-t border-slate-50 flex items-center justify-between text-xs font-black text-slate-800">
+                              <span>{t.howToFilter}</span>
+                              <ChevronRight className="w-4 h-4 text-slate-400" />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
 

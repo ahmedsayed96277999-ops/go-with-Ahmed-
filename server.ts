@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
-import { createServer as createViteServer } from "vite";
 
 dotenv.config();
 
@@ -12,8 +11,9 @@ const PORT = 3000;
   app.use(express.json());
 
 // Initialize Gemini client (server-side only)
-const apiKey = process.env.GEMINI_API_KEY || "AIzaSyDncPoXYv3jOZ-trKfN9uBdAnhHIsfCYEA";
+const apiKey = process.env.GEMINI_API_KEY;
 let ai: GoogleGenAI | null = null;
+let isKeyInvalidOrLeaked = false;
 
 if (apiKey) {
   ai = new GoogleGenAI({
@@ -32,7 +32,7 @@ if (apiKey) {
 // API 0: Check AI Status
 // ----------------------------------------------------
 app.get("/api/ai-status", (req, res) => {
-  res.json({ initialized: ai !== null });
+  res.json({ initialized: (!!process.env.GEMINI_API_KEY) && !isKeyInvalidOrLeaked });
 });
 
 // ----------------------------------------------------
@@ -136,7 +136,18 @@ Total trip duration: ${duration} Days. Respond in ${lang}. All historical sites,
     return res.json(parsedData);
 
   } catch (error: any) {
-    console.error("AI Generation failed, using high-quality local generator:", error.message);
+    const isLeakedOrInvalidErr = error.message && (
+      error.message.includes("leaked") || 
+      error.message.includes("PERMISSION_DENIED") || 
+      error.message.includes("API key not valid") ||
+      error.message.includes("403")
+    );
+    if (isLeakedOrInvalidErr) {
+      isKeyInvalidOrLeaked = true;
+      console.warn("Information: GEMINI_API_KEY reported as restricted or inactive. Using safe fallback generator.");
+    } else {
+      console.error("AI Generation failed, using high-quality local generator:", error.message);
+    }
     
     // Fallback: Generate a extremely high-quality, destination-specific error-free mockup based on inputs
     const isAr = language === "ar";
@@ -157,7 +168,212 @@ Total trip duration: ${duration} Days. Respond in ${lang}. All historical sites,
 
     let finalFallback;
 
-    if (isItalyOrRome) {
+    if (city1 && city2) {
+      const overviewText = isAr 
+        ? `أهلاً بك في رحلتك المخططة بعناية إلى ${country}! برنامج سياحي تخصصي مذهل وخالٍ من الأخطاء يقسم إقامتك بين مدينتي "${city1}" الساحرة و"${city2}" الرائعة لتعيش أفضل تجارب السفر.`
+        : `Welcome to your custom multi-city itinerary to ${country}! This premium, error-free voyager schedule perfectly splits your journey between the beautiful city of "${city1}" and the breathtaking "${city2}".`;
+
+      const c1Dur = Number(city1Duration) || Math.floor(dNum / 2) || 1;
+
+      const daysList = Array.from({ length: dNum }, (_, idx) => {
+        const dayNum = idx + 1;
+        const isCity1 = dayNum <= c1Dur;
+        const currentCity = isCity1 ? city1 : city2;
+        const isTransferDay = dayNum === c1Dur + 1;
+
+        let dayActivities = [];
+        let dayRestaurants = [];
+
+        if (dayNum % 3 === 1) {
+          dayActivities = [
+            {
+              time: "09:00 AM",
+              title: isAr ? `استكشاف روح ${currentCity} التاريخية` : `Morning Heritage Discovery in ${currentCity}`,
+              description: isAr 
+                ? `ابدأ يومك الأول بجولة مشي ممتعة لاستكشاف أعرق الشوارع التاريخية والمباني الأثرية في ${currentCity}، مع التعرف على تاريخها الفريد عن قرب.`
+                : `Embark on a beautiful morning walking tour exploring the historic old streets, ancient architectural facades, and legendary squares of ${currentCity}.`,
+              location: isAr ? `وسط المدينة القديم، ${currentCity}` : `Old Town Center, ${currentCity}`
+            },
+            {
+              time: "12:00 PM",
+              title: isAr ? `زيارة المتاحف الفنية والمعالم البارزة` : `Premium Museum & Cultural Landmarks of ${currentCity}`,
+              description: isAr 
+                ? `قم بزيارة المعالم والمتاحف الكبرى في ${currentCity} التي تحتضن أروع التحف الفنية والمشغولات الأثرية والتاريخية المحفوظة.`
+                : `Visit the central museum and prominent cultural galleries of ${currentCity}, showcasing rich artistic masterworks and heritage artifacts.`,
+              location: isAr ? `المتحف الوطني، ${currentCity}` : `National Central Museum, ${currentCity}`
+            },
+            {
+              time: "03:30 PM",
+              title: isAr ? `لقطات بانورامية وتجول في حدائق ${currentCity}` : `Panoramic Vistas & Botanical Gardens in ${currentCity}`,
+              description: isAr 
+                ? `قضاء وقت هادئ للاسترخاء والتقاط الصور التذكارية الفاتنة في أشهر المتنزهات الطبيعية والحدائق المنسقة المحيطة بمدينة ${currentCity}.`
+                : `Enjoy premium photo opportunities and relax your senses surrounded by lush exotic flora and scenic water routes in the hearts of ${currentCity}.`,
+              location: isAr ? `المطل البانورامي، ${currentCity}` : `Scenic Belvedere Overlook, ${currentCity}`
+            },
+            {
+              time: "07:30 PM",
+              title: isAr ? `أمسية بوهيمية نابضة وعشاء محلي دافئ` : `Bohemian Evening Stroll & Fine Dining in ${currentCity}`,
+              description: isAr 
+                ? `امشِ في الممرات المضيئة المزيّنة بأنوار المساء الساحرة في ${currentCity}، وتذوق وجبة عشاء استثنائية مع سماع الموسيقى التقليدية الحية.`
+                : `Stroll through the glowing, lively pedestrian avenues of ${currentCity}, experiencing local string music and vibrant night-market atmospheres.`,
+              location: isAr ? `الساحة المركزية، ${currentCity}` : `Vibrant Main Plaza, ${currentCity}`
+            }
+          ];
+
+          dayRestaurants = [
+            {
+              name: isAr ? `مطعم لقمة التراث في ${currentCity}` : `${currentCity} Heritage Bistro`,
+              type: isAr ? "غداء" : "Lunch",
+              tip: isAr ? `اطلب طبق اليوم المجهز من المكونات العضوية والبهارات الخاصة بمدينة ${currentCity}` : `Order the house-signature lunch platter crafted from fresh local ingredients of ${currentCity}`
+            },
+            {
+              name: isAr ? `مقهى ورصيف ${currentCity} الكلاسيكي` : `La Bella ${currentCity} Trattoria`,
+              type: isAr ? "عشاء" : "Dinner",
+              tip: isAr ? `جرب حلوى التوت الطازج والكب كيك الساخن المغطى بالكراميل والقهوة` : `Savor their famous home-baked soufflé paired with local drip coffee mixtures`
+            }
+          ];
+        } else if (dayNum % 3 === 2) {
+          dayActivities = [
+            {
+              time: "08:30 AM",
+              title: isAr ? `تذوق وجبة إفطار أصيلة في ${currentCity}` : `Traditional Breakfast & Local Vibe in ${currentCity}`,
+              description: isAr 
+                ? `جرّب المخبوزات والكرواسون الساخن والمقبلات الطازجة المحضرة في أقدم أفران ${currentCity} وسط السكان الأصليين.`
+                : `Indulge in freshly baked artisan bread, warm local pastries, and high-quality breakfast cups inside a historic bakery in ${currentCity}.`,
+              location: isAr ? `مخبز الساحة القديمة، ${currentCity}` : `Old Town Bakery, ${currentCity}`
+            },
+            {
+              time: "11:30 AM",
+              title: isAr ? `جولة القوارب المائية الترفيهية في ${currentCity}` : `${currentCity} Waterfront Cruiser Tour`,
+              description: isAr 
+                ? `اصعد على متن قارب سياحي زجاجي مكشوف للاستمتاع برحلة نهرية رائعة تشاهد فيها المعالم التاريخية وجسور ${currentCity} من زاوية مائية خلابة.`
+                : `Board a local open-top ferry to cruise along the scenic rivers or sea waters of ${currentCity}, capturing monumental sights under sparkling daylight.`,
+              location: isAr ? `المرسى المائي، ${currentCity}` : `Central Harbor Pier, ${currentCity}`
+            },
+            {
+              time: "04:00 PM",
+              title: isAr ? `جولة تسوق الهدايا وحرفيو ${currentCity}` : `Artisan Crafts Shopping & Alleys of ${currentCity}`,
+              description: isAr 
+                ? `تفقد معارض الحرفيين المميزة لشراء الهدايا التذكارية الفريدة والصوف والمصنوعات اليدوية التي يشتهر بها أهل ${currentCity}.`
+                : `Walk between narrow historical lanes to buy hand-woven textiles, aromatic spices, and genuine wooden carvings from native artists of ${currentCity}.`,
+              location: isAr ? `بازار الحرفيين، ${currentCity}` : `Artisan Craft Market, ${currentCity}`
+            },
+            {
+              time: "08:00 PM",
+              title: isAr ? `عشاء ختامي فاخر مطل على الأفق` : `Grand Skyline Dinner Feasts in ${currentCity}`,
+              description: isAr 
+                ? `استمتع بوجبة عشاء فاخرة في مطعم راقٍ بقمة تيرّاس يوفر لك رؤية بانورامية ممتدة لكافة أضواء معالم ${currentCity}.`
+                : `Savor fine dining recipes served on a glamorous high-altitude rooftop overlooking the beautifully lit-up streets of ${currentCity}.`,
+              location: isAr ? `تراس سكايلان، ${currentCity}` : `${currentCity} Sky Lounge, ${currentCity}`
+            }
+          ];
+
+          dayRestaurants = [
+            {
+              name: isAr ? `مطبخ رصيف ${currentCity}` : `${currentCity} Harbor Grill`,
+              type: isAr ? "غداء" : "Lunch",
+              tip: isAr ? `اطلب مقبلات المأكولات البحرية الطازجة المشوية على الفحم` : `Savor fresh coastal seafood recipes flavored with organic sea salts`
+            },
+            {
+              name: isAr ? `مطعم أفيون سكايلان في ${currentCity}` : `${currentCity} Skyline Terrace`,
+              type: isAr ? "عشاء" : "Dinner",
+              tip: isAr ? `اطلب شرائح اللحم المشوية مع حلوى كعكة الشوكولاتة الذائبة` : `Try the premium grilled beef filet paired with warm molten chocolate fudge`
+            }
+          ];
+        } else {
+          dayActivities = [
+            {
+              time: "09:30 AM",
+              title: isAr ? `زيارة المعارض المخفية وروائع الطبيعة في ${currentCity}` : `Hidden Wonders & Nature Paths of ${currentCity}`,
+              description: isAr 
+                ? `رحلة استثنائية لأماكن لا يعرفها أغلب السياح كمعارض الحرف الفردية وشلالات المياه المجاورة والحدائق الكلاسيكية الغناء بمدينة ${currentCity}.`
+                : `Stroll through scenic quiet paths, discovering vintage galleries and peaceful public gardens adored by local residents in ${currentCity}.`,
+              location: isAr ? `حديقة الطبيعة الساحرة، ${currentCity}` : `Secret Gardens of ${currentCity}`
+            },
+            {
+              time: "01:00 PM",
+              title: isAr ? `المشي والتقاط الصور في شوارع الموضة بـ ${currentCity}` : `High-Street Walk & Architectural Photo Tour in ${currentCity}`,
+              description: isAr 
+                ? `تجول في أجمل جادات الموضة والتسوق بمدينة ${currentCity}، للتعرف على أحدث المعروضات والمنتجات الفاخرة.`
+                : `Explore pristine boulevards of ${currentCity} hosting high-fashion houses, bookshops, and neoclassical architecture structures.`,
+              location: isAr ? `شارع التسوق والبولفارد، ${currentCity}` : `Central Boulevard, ${currentCity}`
+            },
+            {
+              time: "04:30 PM",
+              title: isAr ? `المشاركة في جلسة صنع المأكولات المحلية` : `Artisanal Local Treats Cooking Class in ${currentCity}`,
+              description: isAr 
+                ? `انضم لورشة تفاعلية قصيرة لتعلم سر خبيز الأكلات الشعبية في ${currentCity} على يد طباخين خبراء.`
+                : `Participate in a hands-on culinary tasting or pastry mini-class taught by generations of certified chefs in ${currentCity}.`,
+              location: isAr ? `مدرسة الطبخ، ${currentCity}` : `Culinary Institute of ${currentCity}`
+            },
+            {
+              time: "08:00 PM",
+              title: isAr ? `أمسية هادئة على كورنيش ${currentCity}` : `Sunset Waterfront Ambiance Promenade in ${currentCity}`,
+              description: isAr 
+                ? `استرخِ بقرب الممرات المائية وتناول فنجاناً هادئاً من الكابتشينو أو الشاي الساخن مستمتعاً بنسيم الليل النقي في ${currentCity}.`
+                : `Enjoy walking beside peaceful water waves under soft amber streetlights, capping your night with fresh warm beverages.`,
+              location: isAr ? `ممشى الواجهة المائية، ${currentCity}` : `Waterfront Walk, ${currentCity}`
+            }
+          ];
+
+          dayRestaurants = [
+            {
+              name: isAr ? `مقهى الزاوية الأنيق في ${currentCity}` : `The Cozy Corner Cafe, ${currentCity}`,
+              type: isAr ? "غداء" : "Lunch",
+              tip: isAr ? `اطلب الشطائر الساخنة بالجبن الذائب والمشروب البارد المبرد` : `Request the organic avocado toast or freshly toasted cheese paninis`
+            },
+            {
+              name: isAr ? `مطعم الوداع السعيد في ${currentCity}` : `Farewell Feast, ${currentCity}`,
+              type: isAr ? "عشاء" : "Dinner",
+              tip: isAr ? `اطلب طبق المشويات المشكل وحلويات التيراميسو الكلاسيكية` : `Order the chef-special grilled platter and handmade warm apple crusts`
+            }
+          ];
+        }
+
+        if (isTransferDay) {
+          dayActivities.unshift({
+            time: "08:00 AM",
+            title: isAr ? `رحلة الانتقال والترانزيت: من ${city1} إلى ${city2}` : `Transfer & Voyage: From ${city1} to ${city2}`,
+            description: isAr 
+              ? `تسجيل الخروج من الفندق في ${city1} وركوب قطار الأنفاق السريع أو حافلة السفر المريحة للاستمتاع بالمناظر الطبيعية الخلابة على طول الطريق قبل الوصول والاستقرار بالفندق في ${city2}.`
+              : `Check out from your premium hotel in ${city1} and board a comfortable express train or regional shuttle to travel to ${city2}, watching rural landscapes slide by. Check in at your new destination.`,
+            location: isAr ? `محطة القطارات المركزية` : `Central Transit Station`
+          });
+        }
+
+        return {
+          dayNumber: dayNum,
+          title: isAr 
+            ? `اليوم ${dayNum}: ${isCity1 ? `روائع مدينة` : `بدء مغامرة سحرية في`} ${currentCity}` 
+            : `Day ${dayNum}: ${isCity1 ? "Splendors of" : "Discovering the Magical Alleys of"} ${currentCity}`,
+          activities: dayActivities,
+          restaurants: dayRestaurants
+        };
+      });
+
+      const tipsList = isAr
+        ? [
+            `احرص على حجز تذكرة القطار السريع أو وسيلة الانتقال بين مدينتي "${city1}" و"${city2}" مسبقاً عبر الإنترنت لتأكيد المقاعد وتوفير التكلفة.`,
+            `تأكد من اختيار فنادق ذات موقع مركزي قريب من النقل العام في كل من "${city1}" و"${city2}" لتسهيل جولاتك اليومية.`,
+            `احتفظ ببعض العملات النقدية الصغيرة لاستخدامها في عربات النقل المحلية والمقاهي العريقة في كلا المدينتين .`,
+            `استمتع بمقارنة الأكلات والحلويات المميزة محلياً؛ حيث تمتاز كل من "${city1}" و"${city2}" بوصفات تقليدية شهية تختلف عن الأخرى.`
+          ]
+        : [
+            `Pre-book your high-speed train or transit ticket between "${city1}" and "${city2}" online weeks ahead to secure seats at lowest fares.`,
+            `Prefer booking centrally located accommodation near key metro or transit lines in both "${city1}" and "${city2}" to ease travels.`,
+            `Keep cash denoms in local wallets for small vendor shops and local transit purchases in both locations.`,
+            `Enjoy comparing the distinct local cuisines; both "${city1}" and "${city2}" offer delicious custom regional culinary profiles.`
+          ];
+
+      finalFallback = {
+        country: country,
+        duration: dNum,
+        overview: overviewText,
+        days: daysList,
+        essentialTips: tipsList
+      };
+
+    } else if (isItalyOrRome) {
       const overviewText = isAr 
         ? "أهلاً بك في باقة السفر الحصرية إلى إيطاليا وروما العظيمة! قمنا بإعداد برنامج سياحي تخصصي خالٍ من الأخطاء لتخطيط رحلة العمر، لتكتشف عظمة روما الإمبراطورية التاريخية، والفن الساحر، والوجبات الإيطالية الأصيلة."
         : "Welcome to your exclusive luxury travel itinerary to Italy & the eternal city of Rome! We have designed a meticulous, error-free voyage plan to explore majestic Roman archaeological landmarks, renaissance art masterpieces, and authentic Italian gastronomical secrets.";
@@ -915,7 +1131,18 @@ Format response as a JSON object matching requested schema. Respond in ${lang}. 
     return res.json(parsedData);
 
   } catch (error: any) {
-    console.error("AI Museum search failed, returning dynamic mock data:", error.message);
+    const isLeakedOrInvalidErr = error.message && (
+      error.message.includes("leaked") || 
+      error.message.includes("PERMISSION_DENIED") || 
+      error.message.includes("API key not valid") ||
+      error.message.includes("403")
+    );
+    if (isLeakedOrInvalidErr) {
+      isKeyInvalidOrLeaked = true;
+      console.warn("Information: GEMINI_API_KEY reported as restricted or inactive. Using safe fallback museum guide.");
+    } else {
+      console.error("AI Museum search failed, returning dynamic mock data:", error.message);
+    }
     const isAr = language === "ar";
     
     // Dynamic fallback
@@ -982,11 +1209,15 @@ Format response as a JSON object matching requested schema. Respond in ${lang}. 
 // UI Serving / Vite Middleware Setup
 // ----------------------------------------------------
 if (process.env.NODE_ENV !== "production") {
-  createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  }).then((vite) => {
-    app.use(vite.middlewares);
+  import("vite").then(({ createServer: createViteServer }) => {
+    createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    }).then((vite) => {
+      app.use(vite.middlewares);
+    });
+  }).catch((err) => {
+    console.error("Failed to dynamically load Vite in dev server:", err);
   });
 } else {
   const distPath = path.join(process.cwd(), "dist");

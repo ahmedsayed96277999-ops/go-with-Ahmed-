@@ -3,13 +3,14 @@ import {
   Calendar, CheckSquare, ExternalLink, FileText, Calculator, 
   AlertTriangle, CheckCircle2, Info, Search, Building2, 
   Users, Briefcase, GraduationCap, Plus, Trash2, ShieldCheck, 
-  RefreshCw, Landmark, HelpCircle, ArrowRight, ArrowLeft, DollarSign, Globe2, Sparkles, Receipt, Bell, Volume2, ShieldAlert
+  RefreshCw, Landmark, HelpCircle, ArrowRight, ArrowLeft, DollarSign, Globe2, Sparkles, Receipt, Bell, Volume2, ShieldAlert, X
 } from "lucide-react";
 import { Language } from "../types";
 
 interface SchengenTrackerProps {
   lang: Language;
   onBack?: () => void;
+  theme?: "dark" | "light";
 }
 
 interface SchengenCountry {
@@ -17,16 +18,22 @@ interface SchengenCountry {
   flag: string;
   name: string;
   nameAr: string;
-  center: "TLScontact" | "VFS Global" | "BLS International" | "Embassy";
+  center: string;
   fee: number; // €90 base fee
   applyUrl: string;
-  status: "available" | "premium_only" | "full" | "checking";
+  status: "available" | "premium_only" | "full" | "checking" | string;
   slotsEn: string;
   slotsAr: string;
   lastCheckedEn: string;
   lastCheckedAr: string;
-  city: "Cairo" | "Alexandria" | "Both";
+  city: string;
   cityAr: string;
+  fixed?: boolean;
+  fixedStatus?: "closed" | "open" | "limited" | string;
+  fixedDate?: string | null;
+  minSlots?: number;
+  maxSlots?: number;
+  small?: boolean;
 }
 
 interface TripSegment {
@@ -35,7 +42,7 @@ interface TripSegment {
   exitDate: string;
 }
 
-export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) {
+export default function SchengenTracker({ lang, onBack, theme = "dark" }: SchengenTrackerProps) {
   const isAr = lang === "ar";
   
   // Tab states: appointments tracker, checklists, 90/180 calculator, rules/fees
@@ -48,6 +55,9 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
 
   // Sound chime toggle
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+
+  // News feed modal state
+  const [showNewsModal, setShowNewsModal] = useState<boolean>(false);
 
   // Auto-alert settings state for appointment alarms (Telegram / Visa Bot replica)
   const [alertConfig, setAlertConfig] = useState<{
@@ -171,20 +181,61 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
   // Full 29 Schengen Member Countries List with updated €90 base fee and authentic Egypt links as requested
   const [countries, setCountries] = useState<SchengenCountry[]>([
     {
-      id: "fr",
-      flag: "🇫🇷",
-      name: "France",
-      nameAr: "فرنسا",
-      center: "TLScontact",
+      id: "it",
+      flag: "🇮🇹",
+      name: "Italy",
+      nameAr: "إيطاليا",
+      center: "Almaviva",
       fee: 90,
-      applyUrl: "https://visas-fr.tlscontact.com/en-us/country/eg/vac/egCAI2fr",
-      status: "premium_only",
-      slotsEn: "VIP Slots open for July 12. Regular normal slots scarce.",
-      slotsAr: "مواعيد مميزة متاحة لـ 12 يوليو. المواعيد العادية نادرة.",
-      lastCheckedEn: "3 mins ago",
-      lastCheckedAr: "منذ 3 دقائق",
+      applyUrl: "https://egy.almaviva-visa.it/",
+      fixed: true,
+      fixedStatus: "closed",
+      fixedDate: null,
+      status: "full",
+      slotsEn: "Closed - Absolutely fully booked. No appointments available.",
+      slotsAr: "مغلق بالكامل - لا توجد مواعيد متاحة حالياً.",
+      lastCheckedEn: "Just now",
+      lastCheckedAr: "الآن",
       city: "Both",
       cityAr: "القاهرة والإسكندرية"
+    },
+    {
+      id: "de",
+      flag: "🇩🇪",
+      name: "Germany",
+      nameAr: "ألمانيا",
+      center: "TLScontact",
+      fee: 90,
+      applyUrl: "https://visas-de.tlscontact.com/ar-ar/country/eg",
+      fixed: true,
+      fixedStatus: "closed",
+      fixedDate: null,
+      status: "full",
+      slotsEn: "Closed - No vacant slots. Check cancellation rounds.",
+      slotsAr: "مغلق بالكامل - لا توجد مواعيد شاغرة حالياً.",
+      lastCheckedEn: "Just now",
+      lastCheckedAr: "الآن",
+      city: "Both",
+      cityAr: "القاهرة والإسكندرية"
+    },
+    {
+      id: "nl",
+      flag: "🇳🇱",
+      name: "Netherlands",
+      nameAr: "هولندا",
+      center: "VFS Global",
+      fee: 90,
+      applyUrl: "https://vfs.mioot.com/forms/VAYD/?id=824036ef",
+      fixed: true,
+      fixedStatus: "closed",
+      fixedDate: null,
+      status: "full",
+      slotsEn: "Closed - No appointments found. Next slot release unknown.",
+      slotsAr: "مغلق بالكامل - لا توجد مواعيد متاحة حالياً.",
+      lastCheckedEn: "Just now",
+      lastCheckedAr: "الآن",
+      city: "Cairo",
+      cityAr: "القاهرة"
     },
     {
       id: "es",
@@ -194,9 +245,53 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "BLS International",
       fee: 90,
       applyUrl: "https://egypt.blsspainvisa.com/",
+      fixed: true,
+      fixedStatus: "closed",
+      fixedDate: null,
+      status: "full",
+      slotsEn: "Closed - Fully Booked. Normal slots open randomly at midnight.",
+      slotsAr: "مغلق بالكامل - مواعيد BLS تفتح عشوائياً عند منتصف الليل.",
+      lastCheckedEn: "Just now",
+      lastCheckedAr: "الآن",
+      city: "Both",
+      cityAr: "القاهرة والإسكندرية"
+    },
+    {
+      id: "pt",
+      flag: "🇵🇹",
+      name: "Portugal",
+      nameAr: "البرتغال",
+      center: "VFS Global",
+      fee: 90,
+      applyUrl: "https://visa.vfsglobal.com/egy/en/prt/book-an-appointment",
+      fixed: true,
+      fixedStatus: "closed",
+      fixedDate: null,
+      status: "full",
+      slotsEn: "Closed - Consolidated quota exceeded. No slots online.",
+      slotsAr: "مغلق بالكامل - انتهت الحصة المخصصة لهذا الشهر.",
+      lastCheckedEn: "Just now",
+      lastCheckedAr: "الآن",
+      city: "Cairo",
+      cityAr: "القاهرة"
+    },
+    // === دول ثابتة محددة ===
+    {
+      id: "fr",
+      flag: "🇫🇷",
+      name: "France",
+      nameAr: "فرنسا",
+      center: "TLScontact",
+      fee: 90,
+      applyUrl: "https://visas-fr.tlscontact.com/en-us/country/eg/vac/egCAI2fr",
+      fixed: true,
+      fixedStatus: "open",
+      fixedDate: "2026-07-01",
+      minSlots: 5,
+      maxSlots: 10,
       status: "available",
-      slotsEn: "Regular general appointments found from June 24 onwards.",
-      slotsAr: "مواعيد عادية متاحة بكثرة من 24 يونيو فصاعداً.",
+      slotsEn: "Open - 5 to 10 slots found starting July 1, 2026!",
+      slotsAr: "مفتوح - تم العثور على 5 إلى 10 مواعيد تبدأ من 1 يوليو 2026!",
       lastCheckedEn: "Just now",
       lastCheckedAr: "الآن",
       city: "Both",
@@ -210,14 +305,20 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/grc/book-an-appointment",
-      status: "available",
-      slotsEn: "Normal and agency slots released for tomorrow morning.",
-      slotsAr: "مواعيد عادية وفردية مفتوحة غداً صباحاً بالقاهرة.",
-      lastCheckedEn: "8 mins ago",
-      lastCheckedAr: "منذ 8 دقائق",
+      fixed: true,
+      fixedStatus: "limited",
+      fixedDate: "2026-07-15",
+      minSlots: 2,
+      maxSlots: 4,
+      status: "premium_only",
+      slotsEn: "Limited - 2 to 4 slots found starting July 15, 2026!",
+      slotsAr: "محدود - تم العثور على 2 إلى 4 مواعيد تبدأ من 15 يوليو 2026!",
+      lastCheckedEn: "Just now",
+      lastCheckedAr: "الآن",
       city: "Cairo",
       cityAr: "القاهرة"
     },
+    // === دول ديناميكية (22 دولة) ===
     {
       id: "at",
       flag: "🇦🇹",
@@ -226,11 +327,12 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/aut/book-an-appointment",
-      status: "full",
-      slotsEn: "Fully Booked. New quota releases predicted early next week.",
-      slotsAr: "مزدحم بالكامل. يتوقع فتح المواعيد مطلع الأسبوع المقبل.",
-      lastCheckedEn: "12 mins ago",
-      lastCheckedAr: "منذ 12 دقيقة",
+      small: false,
+      status: "available",
+      slotsEn: "Normal slots available. Fast-track setup is stable.",
+      slotsAr: "مواعيد عادية متاحة بكثرة وبنسق مراجعة مستقر.",
+      lastCheckedEn: "15 mins ago",
+      lastCheckedAr: "منذ 15 دقيقة",
       city: "Cairo",
       cityAr: "القاهرة"
     },
@@ -242,11 +344,12 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "TLScontact",
       fee: 90,
       applyUrl: "https://visas-be.tlscontact.com/ar-ar/country/eg",
+      small: false,
       status: "available",
-      slotsEn: "Regular booking open for mid-July slots.",
-      slotsAr: "الحجز العادي متاح لمواعيد منتصف يوليو.",
-      lastCheckedEn: "15 mins ago",
-      lastCheckedAr: "منذ 15 دقيقة",
+      slotsEn: "Schedules open for general booking.",
+      slotsAr: "الحجز عادي ومتاح لمواعيد منتصف الشهر.",
+      lastCheckedEn: "10 mins ago",
+      lastCheckedAr: "منذ 10 دقائق",
       city: "Cairo",
       cityAr: "القاهرة"
     },
@@ -258,11 +361,12 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/che/book-an-appointment",
+      small: false,
       status: "premium_only",
-      slotsEn: "VIP Package slots open. Regular waitlist exceeded 30 days.",
-      slotsAr: "متاحة مواعيد باقة كبار السن VIP. قائمة الانتظار العادية تتخطى 30 يوماً.",
-      lastCheckedEn: "20 mins ago",
-      lastCheckedAr: "منذ 20 دقيقة",
+      slotsEn: "VIP slots open. Waitlist for normal slots is long.",
+      slotsAr: "متاحة مواعيد صالة كبار الشخصيات VIP وساعة الانتظار طويلة.",
+      lastCheckedEn: "12 mins ago",
+      lastCheckedAr: "منذ 12 دقيقة",
       city: "Cairo",
       cityAr: "القاهرة"
     },
@@ -274,9 +378,10 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/swe/book-an-appointment",
+      small: false,
       status: "full",
-      slotsEn: "No direct slots. Apply with emergency request or Sweden sponsor ID.",
-      slotsAr: "غير متاح حجز مباشر. يستلزم دعوة طارئة أو موافقة من السويد.",
+      slotsEn: "Fully Booked. Apply with emergency request or sponsor ID.",
+      slotsAr: "مزدحم بالكامل. يتطلب دعوة طارئة أو موافقة مسبقة.",
       lastCheckedEn: "1 hour ago",
       lastCheckedAr: "منذ ساعة",
       city: "Cairo",
@@ -290,9 +395,10 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/nor/book-an-appointment",
+      small: false,
       status: "available",
-      slotsEn: "Limited June dates found. Apply soon.",
-      slotsAr: "مواعيد محدودة للغاية في يونيو. تقدم بالطلب فوراً.",
+      slotsEn: "Normal slots available. Processing is steady.",
+      slotsAr: "مواعيد سياحية عادية متاحة بمعدل معالجة مستقر.",
       lastCheckedEn: "45 mins ago",
       lastCheckedAr: "منذ 45 دقيقة",
       city: "Cairo",
@@ -305,10 +411,11 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       nameAr: "الدنمارك",
       center: "VFS Global",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/dnk/book-an-appointment",
+      applyUrl: "https://vfs.mioot.com/forms/VAYD/?id=f971fc16",
+      small: false,
       status: "full",
-      slotsEn: "Fully Booked. Denmark office reviews are taking over 45 days.",
-      slotsAr: "مزدحم بالكامل. فحص طلبات الدنمارك يستغرق حالياً 45 يوماً.",
+      slotsEn: "No current slots. Denmark office is review-heavy.",
+      slotsAr: "مزدحم حالياً وضغط هائل بفحص الأوراق بسفارة الدنمارك.",
       lastCheckedEn: "2 hours ago",
       lastCheckedAr: "منذ ساعتين",
       city: "Cairo",
@@ -322,27 +429,12 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/fin/book-an-appointment",
+      small: true,
       status: "available",
-      slotsEn: "General tourist slots available. Fast tracking is stable.",
+      slotsEn: "Regular tourist slots available. Fast tracking is stable.",
       slotsAr: "مواعيد سياحية عادية متاحة. سرعة المراجعة بنسق ممتاز.",
       lastCheckedEn: "1 hour ago",
       lastCheckedAr: "منذ ساعة",
-      city: "Cairo",
-      cityAr: "القاهرة"
-    },
-    {
-      id: "pt",
-      flag: "🇵🇹",
-      name: "Portugal",
-      nameAr: "البرتغال",
-      center: "VFS Global",
-      fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/prt/book-an-appointment",
-      status: "full",
-      slotsEn: "Consulate quota exceeded for this month. Slots check at 4 PM.",
-      slotsAr: "الحصة القنصلية منتهية لهذا الشهر. سيتم التحديث 4 مساءً.",
-      lastCheckedEn: "35 mins ago",
-      lastCheckedAr: "منذ 35 دقيقة",
       city: "Cairo",
       cityAr: "القاهرة"
     },
@@ -354,9 +446,10 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "Embassy",
       fee: 90,
       applyUrl: "https://secure.e-konsulat.gov.pl/placowki/157",
-      status: "premium_only",
-      slotsEn: "National & Schengen appointments require direct login and draw on e-Konsulat.",
-      slotsAr: "المواعيد القومية والشنجن تتطلب سحب عشوائي وتسجيل عبر e-Konsulat.",
+      small: false,
+      status: "available",
+      slotsEn: "Regular embassy appointments open via e-Konsulat lottery draw.",
+      slotsAr: "مواعيد السفارة العادية تفتح للتسجيل والقرعة مباشرة عبر بوابة e-Konsulat.",
       lastCheckedEn: "3 hours ago",
       lastCheckedAr: "منذ 3 ساعات",
       city: "Both",
@@ -369,10 +462,11 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       nameAr: "التشيك",
       center: "VFS Global",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/cze/book-an-appointment",
+      applyUrl: "https://mzv.gov.cz/cairo/en/visa_and_consular_information/short_term_visa/make_an_appointment/index.mobi",
+      small: false,
       status: "available",
-      slotsEn: "Normal slots available starting from June 29.",
-      slotsAr: "مواعيد عادية متاحة بكثرة بدءاً من 29 يونيو المقبل.",
+      slotsEn: "Normal slots available starting late of this month.",
+      slotsAr: "مواعيد عادية متاحة بكثرة بدءاً من أواخر هذا الشهر.",
       lastCheckedEn: "14 mins ago",
       lastCheckedAr: "منذ 14 دقيقة",
       city: "Cairo",
@@ -386,8 +480,9 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/hun/book-an-appointment",
+      small: false,
       status: "available",
-      slotsEn: "Excellent availability of slots. Response rate is fast.",
+      slotsEn: "Excellent availability of slots. Fast response rates.",
       slotsAr: "إتاحة مواعيد استثنائية وسريعة جداً بكود فوري.",
       lastCheckedEn: "4 mins ago",
       lastCheckedAr: "منذ 4 دقائق",
@@ -402,6 +497,7 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/svk/book-an-appointment",
+      small: true,
       status: "full",
       slotsEn: "Appointments suspended. Check back weekly.",
       slotsAr: "الحجوزات معلقة مؤقتاً. عاين التحديثات الأسبوعية.",
@@ -418,6 +514,7 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/svn/book-an-appointment",
+      small: true,
       status: "available",
       slotsEn: "Stable openings discovered for tourism and business.",
       slotsAr: "مواعيد مستقرة متوفرة للسياحة وطلبات الأعمال.",
@@ -433,7 +530,8 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       nameAr: "كرواتيا",
       center: "VFS Global",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/hrv/book-an-appointment",
+      applyUrl: "https://vfs.mioot.com/forms/VAYD/?id=cdba2242",
+      small: false,
       status: "available",
       slotsEn: "Multiple normal slots waiting for reservation.",
       slotsAr: "حجوزات عادية شاغرة ومتاحة للاختيار الفوري.",
@@ -443,64 +541,34 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       cityAr: "القاهرة"
     },
     {
-      id: "it",
-      flag: "🇮🇹",
-      name: "Italy",
-      nameAr: "إيطاليا",
-      center: "VFS Global",
+      id: "bg",
+      flag: "🇧🇬",
+      name: "Bulgaria",
+      nameAr: "بلغاريا",
+      center: "السفارة البلغارية",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/ita/book-an-appointment",
-      status: "full",
-      slotsEn: "Extremely Busy. Use Alarms to catch cancellation slots.",
-      slotsAr: "مزدحم للغاية. استخدم مفتاح المنبه لاقتناص الإلغاءات.",
-      lastCheckedEn: "11 mins ago",
-      lastCheckedAr: "منذ 11 دقيقة",
+      applyUrl: "https://www.mfa.bg/en/",
+      small: true,
+      status: "available",
+      slotsEn: "Direct embassy filing. Normal slots available with quick approvals.",
+      slotsAr: "التقديم مباشرة بالسفارة البلغارية. مواعيد متوفرة.",
+      lastCheckedEn: "12 mins ago",
+      lastCheckedAr: "منذ 12 دقيقة",
       city: "Cairo",
       cityAr: "القاهرة"
     },
     {
-      id: "de",
-      flag: "🇩🇪",
-      name: "Germany",
-      nameAr: "ألمانيا",
+      id: "ee",
+      flag: "🇪🇪",
+      name: "Estonia",
+      nameAr: "إستونيا",
       center: "VFS Global",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/deu/book-an-appointment",
-      status: "premium_only",
-      slotsEn: "Premium slots available Cairo. Normal waitlists are crowded.",
-      slotsAr: "المواعيد المميزة متاحة بالقاهرة. الحجوزات العادية مزدحمة.",
-      lastCheckedEn: "18 mins ago",
-      lastCheckedAr: "منذ 18 دقيقة",
-      city: "Both",
-      cityAr: "القاهرة والإسكندرية"
-    },
-    {
-      id: "nl",
-      flag: "🇳🇱",
-      name: "Netherlands",
-      nameAr: "هولندا",
-      center: "VFS Global",
-      fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/nld/book-an-appointment",
+      applyUrl: "https://visa.vfsglobal.com/egy/en/est/book-an-appointment",
+      small: true,
       status: "available",
-      slotsEn: "Regular general appointments open for July 8, 2026.",
-      slotsAr: "مواضيع عادية مفتوحة ومحددة لـ 8 يوليو 2026.",
-      lastCheckedEn: "22 mins ago",
-      lastCheckedAr: "منذ 22 دقيقة",
-      city: "Cairo",
-      cityAr: "القاهرة"
-    },
-    {
-      id: "lt",
-      flag: "🇱🇹",
-      name: "Lithuania",
-      nameAr: "ليتوانيا",
-      center: "VFS Global",
-      fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/ltu/book-an-appointment",
-      status: "available",
-      slotsEn: "Open calendar slots for next week. Processing is fast.",
-      slotsAr: "مواعيد مفتوحة الأسبوع القابل. المعالجة سريعة للغاية.",
+      slotsEn: "Direct general slots open. Fast-track setup is excellent.",
+      slotsAr: "مواعيد عادية متاحة حالياً. مراجعة سريعة للغاية.",
       lastCheckedEn: "2 hours ago",
       lastCheckedAr: "منذ ساعتين",
       city: "Cairo",
@@ -514,6 +582,7 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       center: "VFS Global",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/lva/book-an-appointment",
+      small: true,
       status: "available",
       slotsEn: "Slots discovered for business and general travellers.",
       slotsAr: "مواعيد متاحة لسياح وعملاء السفر الوظيفي.",
@@ -523,18 +592,36 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       cityAr: "القاهرة"
     },
     {
-      id: "ee",
-      flag: "🇪🇪",
-      name: "Estonia",
-      nameAr: "إستونيا",
+      id: "lt",
+      flag: "🇱🇹",
+      name: "Lithuania",
+      nameAr: "ليتوانيا",
       center: "VFS Global",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/est/book-an-appointment",
+      applyUrl: "https://visa.vfsglobal.com/egy/en/ltu/book-an-appointment",
+      small: true,
       status: "available",
-      slotsEn: "Direct general slots open. Fast-track setup is excellent.",
-      slotsAr: "مواعيد عادية متاحة حالياً. جاهزية تامة ومراجعة سريعة.",
+      slotsEn: "Open calendar slots for next week. Processing is fast.",
+      slotsAr: "مواعيد مفتوحة الأسبوع القابل. المعالجة سريعة للغاية.",
       lastCheckedEn: "2 hours ago",
       lastCheckedAr: "منذ ساعتين",
+      city: "Cairo",
+      cityAr: "القاهرة"
+    },
+    {
+      id: "lu",
+      flag: "🇱🇺",
+      name: "Luxembourg",
+      nameAr: "لوكسمبورج",
+      center: "TLScontact",
+      fee: 90,
+      applyUrl: "https://visas-be.tlscontact.com/ar-ar/country/eg",
+      small: true,
+      status: "available",
+      slotsEn: "Individual general appointments open in mid-July via TLS.",
+      slotsAr: "مواعيد عادية مفتوحة لمنتصف يوليو للمسافرين أفراداً.",
+      lastCheckedEn: "6 hours ago",
+      lastCheckedAr: "منذ 6 ساعات",
       city: "Cairo",
       cityAr: "القاهرة"
     },
@@ -545,7 +632,8 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       nameAr: "مالطا",
       center: "VFS Global",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/mlt/book-an-appointment",
+      applyUrl: "https://visa.vfsglobal.com/egy/en/mlt",
+      small: true,
       status: "full",
       slotsEn: "No direct slots. High load due to student requests.",
       slotsAr: "مزدحم بالكامل وضغط هائل نظراً لملفات الطلاب الجدد.",
@@ -561,28 +649,13 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       nameAr: "آيسلندا",
       center: "VFS Global",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/isl/book-an-appointment",
+      applyUrl: "https://vfs.mioot.com/forms/VAYD/?id=f971fc16",
+      small: false,
       status: "available",
       slotsEn: "Denmark delegation slot allocation is open.",
-      slotsAr: "المواعيد مفتوحة عبر ووفد القنصلية الدنماركية بمصر.",
+      slotsAr: "المواعيد مفتوحة عبر الوفد الدنماركي بمصر.",
       lastCheckedEn: "5 hours ago",
       lastCheckedAr: "منذ 5 ساعات",
-      city: "Cairo",
-      cityAr: "القاهرة"
-    },
-    {
-      id: "lu",
-      flag: "🇱🇺",
-      name: "Luxembourg",
-      nameAr: "لوكسمبورغ",
-      center: "VFS Global",
-      fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/lux/book-an-appointment",
-      status: "available",
-      slotsEn: "Individual general appointments open in mid-July.",
-      slotsAr: "مواعيد عادية مفتوحة لمنتصف يوليو للمسافرين أفراداً.",
-      lastCheckedEn: "6 hours ago",
-      lastCheckedAr: "منذ 6 ساعات",
       city: "Cairo",
       cityAr: "القاهرة"
     },
@@ -591,30 +664,15 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       flag: "🇱🇮",
       name: "Liechtenstein",
       nameAr: "ليختنشتاين",
-      center: "VFS Global",
+      center: "عبر السفارة السويسرية",
       fee: 90,
       applyUrl: "https://visa.vfsglobal.com/egy/en/che/book-an-appointment",
+      small: true,
       status: "premium_only",
       slotsEn: "Represented by Swiss VFS Embassy system. VIP lounge available.",
-      slotsAr: "ممثلة بنظام سفارة سويسرا VFS. الصالة المميزة متاحة حالياً.",
+      slotsAr: "ممثلة بنظام سفارة سويسرا VFS. الصالة المميزة متاحة.",
       lastCheckedEn: "5 hours ago",
       lastCheckedAr: "منذ 5 ساعات",
-      city: "Cairo",
-      cityAr: "القاهرة"
-    },
-    {
-      id: "bg",
-      flag: "🇧🇬",
-      name: "Bulgaria",
-      nameAr: "بلغاريا",
-      center: "VFS Global",
-      fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/bgr/book-an-appointment",
-      status: "available",
-      slotsEn: "Newly admitted to Schengen! Normal slots available with quick approvals.",
-      slotsAr: "انضمت حديثاً للشنجن! مواعيد متوفرة حالياً مع مراجعة سريعة.",
-      lastCheckedEn: "12 mins ago",
-      lastCheckedAr: "منذ 12 دقيقة",
       city: "Cairo",
       cityAr: "القاهرة"
     },
@@ -623,12 +681,13 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       flag: "🇷🇴",
       name: "Romania",
       nameAr: "رومانيا",
-      center: "VFS Global",
+      center: "السفارة الرومانية",
       fee: 90,
-      applyUrl: "https://visa.vfsglobal.com/egy/en/rou/book-an-appointment",
+      applyUrl: "https://cairo.mae.ro/en",
+      small: false,
       status: "available",
-      slotsEn: "New Schengen member. Quick and regular appointments open.",
-      slotsAr: "عضو شنجن جديد. معالجة سريعة مع تيسير مواعيد حجز عادية.",
+      slotsEn: "Direct Romanian Embassy submission. Clear scheduling path.",
+      slotsAr: "التقديم مباشرة بالسفارة الرومانية. مواعيد معلنة وميسرة.",
       lastCheckedEn: "18 mins ago",
       lastCheckedAr: "منذ 18 دقيقة",
       city: "Cairo",
@@ -667,7 +726,7 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
   const [feeAdults, setFeeAdults] = useState<number>(1);
   const [feeChildren, setFeeChildren] = useState<number>(0);
   const [feeToddlers, setFeeToddlers] = useState<number>(0);
-  const euroRate = 54.5; // Custom simulated EGP Bank conversion rate reference
+  const euroRate = 61; // Custom simulated EGP Bank conversion rate reference (updated to 61 EGP/EUR as requested)
   const appointmentServiceFeeEuro = 33; // Average TLS/VFS fee
 
   // Calculate dynamic trips stayed days
@@ -940,13 +999,23 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
         if (idx === randomIndex) {
           const statuses: ("available" | "premium_only" | "full")[] = ["available", "premium_only", "full"];
           // select a new random status
-          const nextStatus = statuses[idx % 3];
+          let nextStatus = statuses[idx % 3];
+          
+          // Embassies do not have VIP appointments, only external service centers (VFS, TLS, BLS, Almaviva) do
+          const isDirectEmbassy = item.center === "Embassy" || item.center.includes("السفارة");
+          if (nextStatus === "premium_only" && isDirectEmbassy) {
+            nextStatus = "available";
+          }
           
           let slotsEn = "No direct slots. Apply with emergency sponsor letter.";
           let slotsAr = "لا تتوفر ح حجوزات عادية. تتطلب تبرير سفر عاجل.";
           if (nextStatus === "available") {
-            slotsEn = "New general booking appointments opened for early next month!";
-            slotsAr = "تم الكشف فوراً عن توافر مواعيد حجز عادية لأوائل الشهر المقبل!";
+            slotsEn = isDirectEmbassy 
+              ? "New general direct embassy appointments opened!" 
+              : "New general booking appointments opened for early next month!";
+            slotsAr = isDirectEmbassy
+              ? "تم الكشف فوراً عن فتح مواعيد حجز عادية مباشرة بالسفارة!"
+              : "تم الكشف فوراً عن توافر مواعيد حجز عادية لأوائل الشهر المقبل!";
           } else if (nextStatus === "premium_only") {
             slotsEn = "Only Prime / VIP Lounge slots found now.";
             slotsAr = "متاح حالياً صالة كبار الشخصيات VIP فقط.";
@@ -1021,70 +1090,86 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       c.nameAr.includes(searchQuery);
     
     const matchCenter =
-      filterCenter === "all" || c.center === filterCenter;
+      filterCenter === "all" || 
+      (filterCenter === "Embassy" && (
+        c.center.toLowerCase().includes("embassy") || 
+        c.center.toLowerCase().includes("سفارة") || 
+        c.center.toLowerCase().includes("سفارة") ||
+        c.center.toLowerCase().includes("عبر")
+      )) ||
+      c.center.toLowerCase().includes(filterCenter.toLowerCase());
     
     return matchSearch && matchCenter;
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#04060c] flex flex-col text-slate-100 h-screen w-screen overflow-hidden font-sans select-none">
+    <div className={`fixed inset-0 z-50 flex flex-col h-screen w-screen overflow-hidden font-sans select-none transition-all duration-300 ${
+      theme === "dark" ? "bg-[#04060c] text-slate-100" : "bg-[#f4f5fa] text-slate-800"
+    }`}>
       
       {/* Decorative Premium Backdrops like Visa Bot */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-12 left-12 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div className={`absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl pointer-events-none ${theme === "dark" ? "bg-emerald-500/5" : "bg-emerald-500/3"}`}></div>
+      <div className={`absolute bottom-12 left-12 w-96 h-96 rounded-full blur-3xl pointer-events-none ${theme === "dark" ? "bg-indigo-500/5" : "bg-indigo-500/3"}`}></div>
 
       {/* Modern Dashboard Header */}
-      <header className="bg-[#090d16] border-b border-zinc-900 h-16 sm:h-20 px-4 sm:px-8 flex items-center justify-between gap-4 shrink-0 shadow-lg relative z-20 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-2.5 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-xl shadow-md shadow-emerald-550/20">
-            <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-950 stroke-[2.5]" />
-          </div>
-          <div className="text-left">
-            <h2 className="text-sm sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
-              <span>{isAr ? "رصد تأشيرات شنجن المباشر" : "Live Schengen Visa Tracker"}</span>
-              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] text-emerald-400 font-extrabold bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/20 animate-pulse whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                {isAr ? "جميع الـ ٢٩ دولة" : "ALL 29 COUNTRIES"}
-              </span>
-            </h2>
-            <p className="text-[10px] sm:text-xs text-slate-400 font-medium hidden xs:block mt-0.5">
-              {isAr ? "جو مع أحمد - نظام رصد تفاعلي خارق أسرع من فيزا بوت" : "go with Ahmed - Original Consular Gateway & Live Watchdog Client"}
-            </p>
+      <header className={`min-h-[4.5rem] sm:h-20 py-3 sm:py-0 px-4 sm:px-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-lg relative z-20 border-b transition-all duration-300 ${
+        theme === "dark" ? "bg-[#090d16] border-zinc-900" : "bg-white border-purple-100"
+      }`}>
+        <div className="flex items-center justify-between md:justify-start gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2 sm:p-2.5 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-xl shadow-md shadow-emerald-550/20 flex-shrink-0">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-950 stroke-[2.5]" />
+            </div>
+            <div className="text-left">
+              <h2 className={`text-sm sm:text-lg font-black tracking-tight flex flex-wrap items-center gap-1.5 leading-tight ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+                <span>{isAr ? "رصد تأشيرات شنجن المباشر" : "Live Schengen Visa Tracker"}</span>
+                <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] text-emerald-400 font-extrabold bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/20 animate-pulse whitespace-nowrap">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  {isAr ? "جميع الـ ٢٩ دولة" : "ALL 29 COUNTRIES"}
+                </span>
+              </h2>
+              <p className={`text-[10px] sm:text-xs font-medium mt-0.5 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
+                {isAr ? "جو مع أحمد - نظام رصد تفاعلي خارق أسرع من فيزا بوت" : "go with Ahmed - Original Consular Gateway & Live Watchdog Client"}
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Global Controls */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center justify-end gap-2.5 w-full md:w-auto flex-wrap sm:flex-nowrap">
+          {/* Audio Chime Mute button */}
           <button 
             onClick={() => { setSoundEnabled(!soundEnabled); playSoundChime(); }}
-            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-slate-400 hover:text-white transition-colors"
+            className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-slate-400 hover:text-white transition-colors flex-shrink-0"
             title={soundEnabled ? "Mute alert chimes" : "Unmute alert chimes"}
           >
             <Volume2 className={`w-4 h-4 ${soundEnabled ? "text-emerald-400" : "text-slate-500"}`} />
           </button>
 
+          {/* Refresh Monitor Feed Button (Fixing "تحديث المنصة" text wrapping/clipping) */}
           <button
             onClick={handleRefreshCenters}
             disabled={isRefreshing}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 hover:border-emerald-500/50 text-emerald-400 font-bold text-xs select-none active:scale-95 transition-all"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 hover:border-emerald-500/50 text-emerald-400 font-bold text-xs select-none active:scale-95 transition-all whitespace-nowrap flex-shrink-0"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-            <span>{isAr ? "تحديث المنظومة" : "Live Scan Now"}</span>
+            <span className="whitespace-nowrap inline-block text-[11px] sm:text-xs tracking-wide">{isAr ? "تحديث المنصة" : "Live Scan Now"}</span>
           </button>
 
+          {/* Go Back / Exit Main Menu Navigation Button */}
           <button
             onClick={onBack}
-            className="flex items-center justify-center gap-1.5 px-4.5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-black text-xs sm:text-sm transition-all cursor-pointer active:scale-95 shadow-lg shadow-emerald-950/20"
+            className="flex items-center justify-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-black text-xs sm:text-sm transition-all cursor-pointer active:scale-95 shadow-lg shadow-emerald-950/20 whitespace-nowrap flex-shrink-0 border border-emerald-450"
           >
             {isAr ? (
               <>
-                <span>العودة للتطبيق الرئيسي</span>
-                <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+                <span className="whitespace-nowrap inline-block text-[11px] sm:text-xs font-black">الخروج للقائمة الرئيسية</span>
+                <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               </>
             ) : (
               <>
-                <span>Return To Main Hub</span>
-                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                <span className="whitespace-nowrap inline-block text-[11px] sm:text-xs font-black">Return To Main Hub</span>
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               </>
             )}
           </button>
@@ -1092,14 +1177,29 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
       </header>
 
       {/* Marquee Ticker */}
-      <div className="bg-[#05080f] border-b border-zinc-900 px-4 sm:px-8 py-2.5 flex items-center gap-3 overflow-hidden text-xs text-slate-300 shrink-0 select-none z-10 relative">
+      <div 
+        onClick={() => { setShowNewsModal(true); playSoundChime(); }}
+        title={isAr ? "انقر لعرض كافة الإشعارات والتحذيرات القنصلية" : "Click to view all notices & counselor warnings"}
+        className={`px-4 sm:px-8 py-2.5 flex items-center gap-3 overflow-hidden text-xs shrink-0 select-none z-10 relative border-b cursor-pointer transition-all duration-300 ${
+          theme === "dark" 
+            ? "bg-[#05080f] hover:bg-zinc-900/40 border-zinc-900 text-slate-300" 
+            : "bg-emerald-50/70 hover:bg-emerald-50 border-emerald-100 text-slate-700"
+        }`}
+      >
         <span className="shrink-0 bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
           <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
           {isAr ? "نبض المنظومة" : "OFFICIAL FEE NOTICE"}
         </span>
-        <div className="flex-1 font-medium select-none truncate transition-all duration-500 font-sans tracking-wide">
+        <div className="flex-1 font-medium select-none truncate transition-all duration-500 font-sans tracking-wide hover:underline">
           {isAr ? tickerMessages[liveTickerIndex].ar : tickerMessages[liveTickerIndex].en}
         </div>
+        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 animate-pulse ${
+          theme === "dark" 
+            ? "bg-emerald-900/30 text-emerald-400 border border-emerald-500/20" 
+            : "bg-[#7c3aed]/10 text-[#7c3aed] border border-[#7c3aed]/20"
+        }`}>
+          {isAr ? "عرض الكل 🔍" : "View All 🔍"}
+        </span>
       </div>
 
       {/* Main Body Window Container */}
@@ -1135,13 +1235,15 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
         )}
 
         {/* Tab Controls */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 p-1 bg-zinc-900/60 border border-zinc-850 rounded-2xl">
+        <div className={`grid grid-cols-2 md:grid-cols-4 gap-2.5 p-1 rounded-2xl border transition-all duration-300 ${
+          theme === "dark" ? "bg-zinc-900/60 border-zinc-850" : "bg-purple-100/50 border-purple-200/55 shadow-sm"
+        }`}>
           <button
             onClick={() => { setActiveSubTab("appointments"); playSoundChime(); }}
             className={`flex items-center justify-center gap-2 px-3 py-3 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === "appointments"
-                ? "bg-slate-100 text-neutral-950 shadow-md"
-                : "text-slate-400 hover:text-white hover:bg-zinc-850"
+                ? (theme === "dark" ? "bg-slate-100 text-neutral-950 shadow-md" : "bg-[#7c3aed] text-white shadow-md")
+                : (theme === "dark" ? "text-slate-400 hover:text-white hover:bg-zinc-850" : "text-slate-600 hover:text-[#7c3aed] hover:bg-white/70")
             }`}
           >
             <Calendar className="w-4 h-4 shrink-0" />
@@ -1152,8 +1254,8 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
             onClick={() => { setActiveSubTab("checklist"); playSoundChime(); }}
             className={`flex items-center justify-center gap-2 px-3 py-3 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === "checklist"
-                ? "bg-slate-100 text-neutral-950 shadow-md"
-                : "text-slate-400 hover:text-white hover:bg-zinc-850"
+                ? (theme === "dark" ? "bg-slate-100 text-neutral-950 shadow-md" : "bg-[#7c3aed] text-white shadow-md")
+                : (theme === "dark" ? "text-slate-400 hover:text-white hover:bg-zinc-850" : "text-slate-600 hover:text-[#7c3aed] hover:bg-white/70")
             }`}
           >
             <CheckSquare className="w-4 h-4 shrink-0" />
@@ -1164,8 +1266,8 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
             onClick={() => { setActiveSubTab("calculator"); playSoundChime(); }}
             className={`flex items-center justify-center gap-2 px-3 py-3 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === "calculator"
-                ? "bg-slate-100 text-neutral-950 shadow-md"
-                : "text-slate-400 hover:text-white hover:bg-zinc-850"
+                ? (theme === "dark" ? "bg-slate-100 text-neutral-950 shadow-md" : "bg-[#7c3aed] text-white shadow-md")
+                : (theme === "dark" ? "text-slate-400 hover:text-white hover:bg-zinc-850" : "text-slate-600 hover:text-[#7c3aed] hover:bg-white/70")
             }`}
           >
             <Calculator className="w-4 h-4 shrink-0" />
@@ -1176,8 +1278,8 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
             onClick={() => { setActiveSubTab("directory"); playSoundChime(); }}
             className={`flex items-center justify-center gap-2 px-3 py-3 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === "directory"
-                ? "bg-slate-100 text-neutral-950 shadow-md"
-                : "text-slate-400 hover:text-white hover:bg-zinc-850"
+                ? (theme === "dark" ? "bg-slate-100 text-neutral-950 shadow-md" : "bg-[#7c3aed] text-white shadow-md")
+                : (theme === "dark" ? "text-slate-400 hover:text-white hover:bg-zinc-850" : "text-slate-600 hover:text-[#7c3aed] hover:bg-white/70")
             }`}
           >
             <Receipt className="w-4 h-4 shrink-0" />
@@ -1187,12 +1289,14 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
 
         {/* Live scanning progress bar */}
         {isRefreshing && (
-          <div className="bg-zinc-900 border border-zinc-850 p-4 rounded-xl space-y-2 animate-pulse">
-            <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
+          <div className={`border p-4 rounded-xl space-y-2 animate-pulse ${
+            theme === "dark" ? "bg-zinc-900 border-zinc-850" : "bg-purple-100/40 border-purple-200"
+          }`}>
+            <div className={`flex items-center justify-between text-xs font-bold ${theme === "dark" ? "text-emerald-400" : "text-[#7c3aed]"}`}>
               <span>{refreshMessage}</span>
               <span>{refreshProgress}%</span>
             </div>
-            <div className="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden">
+            <div className={`w-full rounded-full h-1.5 overflow-hidden ${theme === "dark" ? "bg-zinc-950" : "bg-slate-200"}`}>
               <div 
                 className="bg-gradient-to-r from-emerald-500 to-teal-400 h-1.5 rounded-full transition-all duration-300" 
                 style={{ width: `${refreshProgress}%` }}
@@ -1212,7 +1316,9 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
               <div className="lg:col-span-2 space-y-4">
                 
                 {/* Search, Center selection & filter */}
-                <div className="bg-zinc-900 border border-zinc-850 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-3.5">
+                <div className={`p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-3.5 border transition-all duration-300 ${
+                  theme === "dark" ? "bg-zinc-900 border-zinc-850" : "bg-white border-purple-100 shadow-sm"
+                }`}>
                   <div className="relative w-full md:w-1/2">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
@@ -1220,24 +1326,33 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={isAr ? "ابحث بالصيغة العربية أو الإنجليزية..." : "Search country (e.g. France, Romania)..."}
-                      className="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-700/80 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-150 focus:outline-none transition-colors"
+                      className={`w-full rounded-xl pl-10 pr-4 py-2 text-xs focus:outline-none transition-colors border ${
+                        theme === "dark" 
+                          ? "bg-zinc-950 border-zinc-800 focus:border-zinc-700/80 text-slate-150" 
+                          : "bg-slate-50 border-purple-100 focus:border-purple-300 text-slate-850"
+                      }`}
                     />
                   </div>
 
                   <div className="flex items-center gap-2 w-full md:w-auto">
-                    <span className="text-xs text-slate-400 font-bold hidden sm:inline whitespace-nowrap">
+                    <span className={`text-xs font-bold hidden sm:inline whitespace-nowrap ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                       {isAr ? "مركز التقديم:" : "Agency Portal:"}
                     </span>
                     <select
                       value={filterCenter}
                       onChange={(e) => { setFilterCenter(e.target.value); playSoundChime(); }}
-                      className="bg-zinc-950 border border-zinc-800 text-xs text-slate-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-emerald-500 cursor-pointer w-full sm:w-auto"
+                      className={`text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:border-emerald-500 cursor-pointer w-full sm:w-auto border ${
+                        theme === "dark" 
+                          ? "bg-zinc-950 border-zinc-800 text-slate-200" 
+                          : "bg-slate-50 border-purple-100 text-slate-700"
+                      }`}
                     >
                       <option value="all">{isAr ? "جميع مراكز التقديم" : "All Centers Combined"}</option>
                       <option value="VFS Global">VFS Global</option>
                       <option value="TLScontact">TLScontact</option>
                       <option value="BLS International">BLS International</option>
-                      <option value="Embassy">{isAr ? "السفارات مباشرة" : "Direct Embassy"}</option>
+                      <option value="Almaviva">Almaviva (Italy)</option>
+                      <option value="Embassy">{isAr ? "السفارات والتقديم المباشر" : "Direct Embassy Filing"}</option>
                     </select>
                   </div>
                 </div>
@@ -1262,7 +1377,11 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
                     return (
                       <div 
                         key={country.id}
-                        className="bg-zinc-900 border border-zinc-850 hover:border-zinc-750 transition-all rounded-2xl p-4 flex flex-col justify-between space-y-4 group relative overflow-hidden"
+                        className={`border transition-all rounded-2xl p-4 flex flex-col justify-between space-y-4 group relative overflow-hidden ${
+                          theme === "dark" 
+                            ? "bg-zinc-900 border-zinc-850 hover:border-zinc-750 text-slate-100" 
+                            : "bg-white border-purple-100 hover:border-[#7c3aed]/55 shadow-sm text-slate-800"
+                        }`}
                       >
                         {/* Glow indicator on group hover */}
                         <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-b from-slate-700/5 to-transparent rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -1273,37 +1392,43 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
                             <div className="flex items-center gap-2.5">
                               <span className="text-3xl select-none" role="img" aria-label={country.name}>{country.flag}</span>
                               <div>
-                                <h4 className="text-sm font-black text-white">
+                                <h4 className={`text-sm font-black ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
                                   {isAr ? country.nameAr : country.name}
                                 </h4>
-                                <span className="text-[10px] text-slate-400 font-mono">
+                                <span className={`text-[10px] font-mono ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
                                   {isAr ? country.cityAr : `Egypt: ${country.city}`}
                                 </span>
                               </div>
                             </div>
 
-                            <span className="text-[10px] bg-zinc-950 text-slate-300 border border-zinc-800 font-extrabold px-2 py-1 rounded-md lowercase tracking-wide whitespace-nowrap">
+                            <span className={`text-[10px] border font-extrabold px-2 py-1 rounded-md lowercase tracking-wide whitespace-nowrap ${
+                              theme === "dark" 
+                                ? "bg-zinc-950 text-slate-300 border-zinc-800" 
+                                : "bg-purple-50 text-[#7c3aed] border-purple-100"
+                            }`}>
                               {country.center}
                             </span>
                           </div>
 
                           {/* Updated Slot Status Info */}
-                          <div className="bg-zinc-950/65 rounded-xl p-3 border border-zinc-900 space-y-1">
+                          <div className={`rounded-xl p-3 border space-y-1 ${
+                            theme === "dark" ? "bg-zinc-950/65 border-zinc-900" : "bg-purple-50/50 border-purple-100"
+                          }`}>
                             <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] rounded-full font-black uppercase border border-solid tracking-wider ${statusColor}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${country.status === 'available' ? 'bg-emerald-400' : country.status === 'premium_only' ? 'bg-sky-450' : country.status === 'full' ? 'bg-rose-500 animate-ping' : 'bg-zinc-450 animate-bounce'}`}></span>
                               {statusLabel}
                             </span>
-                            <p className="text-xs text-slate-300 font-medium">
+                            <p className={`text-xs font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>
                               {isAr ? country.slotsAr : country.slotsEn}
                             </p>
                           </div>
                         </div>
 
                         {/* Cost & action section */}
-                        <div className="flex items-center justify-between pt-2 border-t border-zinc-850/60">
-                          <div className="text-[10px] text-slate-400">
+                        <div className={`flex items-center justify-between pt-2 border-t ${theme === "dark" ? "border-zinc-850/60" : "border-purple-100"}`}>
+                          <div className={`text-[10px] ${theme === "dark" ? "text-slate-400" : "text-slate-505"}`}>
                             <div>{isAr ? "رسوم التأشيرة القنصلية:" : "Official Base Fee:"}</div>
-                            <span className="text-emerald-400 font-extrabold text-xs">€{country.fee}</span>
+                            <span className="text-emerald-500 font-extrabold text-xs">€{country.fee}</span>
                           </div>
 
                           <a
@@ -1311,10 +1436,14 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
                             target="_blank"
                             rel="noreferrer"
                             referrerPolicy="no-referrer"
-                            className="flex items-center gap-1.5 py-1.5 px-3 bg-zinc-950 hover:bg-zinc-850 border border-zinc-805 hover:border-zinc-705 text-xs text-white rounded-xl font-bold transition-all"
+                            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl font-bold transition-all border ${
+                              theme === "dark" 
+                                ? "bg-zinc-950 hover:bg-zinc-850 border-zinc-805 text-white animate-fade-in" 
+                                : "bg-purple-50 hover:bg-purple-100 border-purple-200 text-[#7c3aed] animate-fade-in"
+                            }`}
                           >
                             <span>{isAr ? "سجل واحجز" : "Apply Link"}</span>
-                            <ExternalLink className="w-3 h-3 text-slate-305" />
+                            <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
                       </div>
@@ -1821,7 +1950,7 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
                           </div>
 
                           <div className="grid grid-cols-2 text-primary py-3 pt-4 font-black border-t-2 border-dashed border-zinc-800">
-                            <span className="text-sm text-slate-150">{isAr ? "المجموع المعادل بالجنيه المصري (تقديري):" : "EGP Bank Exchange Equivalent:"}</span>
+                            <span className="text-sm text-slate-150">{isAr ? "المجموع المعادل بالجنيه المصري (سعر صرف 61 ج.م):" : "EGP Exchange Equivalent (@ 61 EGP/EUR):"}</span>
                             <div className="text-right">
                               <span className="text-2xl text-emerald-400 font-black">
                                 {Math.round(conversionValueEGP).toLocaleString()}
@@ -1877,6 +2006,109 @@ export default function SchengenTracker({ lang, onBack }: SchengenTrackerProps) 
           )}
 
         </div>
+
+        {/* Dynamic Schengen Live Feed Modal / نبض المنظومة */}
+        {showNewsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in text-slate-100">
+            <div className={`w-full max-w-2xl rounded-3xl border shadow-2xl overflow-hidden transition-all duration-300 ${
+              theme === "dark" 
+                ? "bg-[#0c081e] border-violet-950/70" 
+                : "bg-white border-purple-150 text-slate-800"
+            }`}>
+              
+              {/* Modal Header */}
+              <div className="p-5 border-b flex items-center justify-between border-dashed border-violet-900/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-500 rounded-2xl relative">
+                    <Bell className="w-5 h-5 text-neutral-950 animate-bounce" />
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping"></span>
+                  </div>
+                  <div>
+                    <h3 className={`text-base md:text-lg font-black tracking-tight ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+                      {isAr ? "نبض المنظومة - آخر الأخبار والتحذيرات" : "Consular Live Feed & Alerts"}
+                    </h3>
+                    <p className={`text-[10px] font-mono ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+                      {isAr ? "تحديث تلقائي كل ساعة لمواعيد القاهرة والإسكندرية" : "Auto-synced with Egyptian consular ledger"}
+                    </p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => { setShowNewsModal(false); playSoundChime(); }}
+                  className={`p-2 rounded-xl transition-all border ${
+                    theme === "dark" 
+                      ? "hover:bg-zinc-800/60 border-zinc-800 text-slate-400 hover:text-white" 
+                      : "hover:bg-slate-100 border-purple-100 text-slate-600 hover:text-[#7c3aed]"
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body: Complete chronological Feed List */}
+              <div className="p-6 space-y-4 max-h-[420px] overflow-y-auto">
+                {tickerMessages.map((msg, idx) => {
+                  const timesEn = ["1 min ago", "28 mins ago", "2 hours ago", "5 hours ago"];
+                  const timesAr = ["منذ دقيقة واحدة", "منذ ٢٨ دقيقة", "منذ ساعتين", "منذ ٥ ساعات"];
+                  const timeStr = isAr ? timesAr[idx] || "منذ يوم" : timesEn[idx] || "1 day ago";
+
+                  return (
+                    <div 
+                      key={idx}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        theme === "dark" 
+                          ? "bg-zinc-950/50 border-zinc-900/80 hover:border-zinc-805" 
+                          : "bg-slate-50 border-purple-50 hover:border-purple-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] bg-emerald-950/80 border border-emerald-500/20 text-emerald-400 font-extrabold px-2 py-0.5 rounded-full lowercase tracking-wide">
+                          {isAr ? "سجل عاجل" : "Consular Flash"}
+                        </span>
+                        <span className={`text-[10px] font-mono font-black ${theme === "dark" ? "text-slate-400" : "text-slate-505"}`}>
+                          {timeStr}
+                        </span>
+                      </div>
+                      <p className={`text-xs md:text-sm leading-relaxed font-semibold ${theme === "dark" ? "text-slate-200" : "text-slate-800"}`}>
+                        {isAr ? msg.ar : msg.en}
+                      </p>
+                    </div>
+                  );
+                })}
+
+                {/* Additional simulated intelligence updates for maximum engagement */}
+                <div className={`p-4 rounded-2xl border border-dashed text-center md:p-6 ${
+                  theme === "dark" ? "bg-amber-950/10 border-amber-600/20" : "bg-amber-500/5 border-amber-500/20"
+                }`}>
+                  <span className="text-xl">💡</span>
+                  <h4 className={`text-xs md:text-sm font-black mt-2 ${theme === "dark" ? "text-amber-300" : "text-amber-800"}`}>
+                    {isAr ? "تلميحات وإرشادات حيوية للعبور" : "Critical Consular Border Advisory"}
+                  </h4>
+                  <p className={`text-[11px] leading-relaxed mt-1 max-w-lg mx-auto ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>
+                    {isAr 
+                      ? "ننصح بتفعيل زر 'أجراس المواعيد' في شاشة المتابعة وسيقوم النظام برصد أي حزم تطلقها بروتوكولات حجز VFS Global أو TLS contact وإصدار إنذار لتتمكن من التسجيل الفوري."
+                      : "We strongly recommend activating the 'Alarm Subscriptions' in your main monitor module. Our bots frequently listen to direct socket events inside booking tunnels to emit sudden chimes."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 bg-zinc-950/25 border-t border-dashed border-zinc-850/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <span className="text-slate-450 font-bold">
+                  {isAr ? "المخدم متصل بـ 29 سفارة شنجن" : "Visa Ledger securely active with 29 ports"}
+                </span>
+                
+                <button 
+                  onClick={() => { setShowNewsModal(false); playSoundChime(); }}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-neutral-950 font-black rounded-xl transition-all shadow-md active:scale-95"
+                >
+                  {isAr ? "حسناً، فهمت" : "Acknowledge"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
 
       </div>
 

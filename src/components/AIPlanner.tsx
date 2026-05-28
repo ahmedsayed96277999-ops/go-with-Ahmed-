@@ -5,38 +5,93 @@ import { translations } from "../utils/translations";
 import { generateItineraryPDF } from "../utils/pdfGenerator";
 
 const POPULAR_DESTINATIONS = [
+  // Italy
   { cityEn: "Rome", cityAr: "روما", countryEn: "Italy", countryAr: "إيطاليا", flag: "🇮🇹" },
   { cityEn: "Venice", cityAr: "البندقية", countryEn: "Italy", countryAr: "إيطاليا", flag: "🇮🇹" },
   { cityEn: "Milan", cityAr: "ميلان", countryEn: "Italy", countryAr: "إيطاليا", flag: "🇮🇹" },
   { cityEn: "Florence", cityAr: "فلورنسا", countryEn: "Italy", countryAr: "إيطاليا", flag: "🇮🇹" },
+  { cityEn: "Naples", cityAr: "نابولي", countryEn: "Italy", countryAr: "إيطاليا", flag: "🇮🇹" },
+  { cityEn: "Amalfi", cityAr: "أمالفي", countryEn: "Italy", countryAr: "إيطاليا", flag: "🇮🇹" },
+
+  // Egypt
   { cityEn: "Cairo", cityAr: "القاهرة", countryEn: "Egypt", countryAr: "مصر", flag: "🇪🇬" },
   { cityEn: "Alexandria", cityAr: "الإسكندرية", countryEn: "Egypt", countryAr: "مصر", flag: "🇪🇬" },
   { cityEn: "Luxor", cityAr: "الأقصر", countryEn: "Egypt", countryAr: "مصر", flag: "🇪🇬" },
   { cityEn: "Aswan", cityAr: "أسوان", countryEn: "Egypt", countryAr: "مصر", flag: "🇪🇬" },
   { cityEn: "Sharm El Sheikh", cityAr: "شرم الشيخ", countryEn: "Egypt", countryAr: "مصر", flag: "🇪🇬" },
   { cityEn: "Hurghada", cityAr: "الغردقة", countryEn: "Egypt", countryAr: "مصر", flag: "🇪🇬" },
+
+  // United Kingdom
   { cityEn: "London", cityAr: "لندن", countryEn: "United Kingdom", countryAr: "المملكة المتحدة", flag: "🇬🇧" },
+  { cityEn: "Manchester", cityAr: "مانشستر", countryEn: "United Kingdom", countryAr: "المملكة المتحدة", flag: "🇬🇧" },
+  { cityEn: "Edinburgh", cityAr: "إدنبرة", countryEn: "United Kingdom", countryAr: "المملكة المتحدة", flag: "🇬🇧" },
+  { cityEn: "Liverpool", cityAr: "ليفربول", countryEn: "United Kingdom", countryAr: "المملكة المتحدة", flag: "🇬🇧" },
+  { cityEn: "Birmingham", cityAr: "برمنغهام", countryEn: "United Kingdom", countryAr: "المملكة المتحدة", flag: "🇬🇧" },
+
+  // France
   { cityEn: "Paris", cityAr: "باريس", countryEn: "France", countryAr: "فرنسا", flag: "🇫🇷" },
   { cityEn: "Nice", cityAr: "نيس", countryEn: "France", countryAr: "فرنسا", flag: "🇫🇷" },
+  { cityEn: "Marseille", cityAr: "مارسيليا", countryEn: "France", countryAr: "فرنسا", flag: "🇫🇷" },
+  { cityEn: "Lyon", cityAr: "ليون", countryEn: "France", countryAr: "فرنسا", flag: "🇫🇷" },
+  { cityEn: "Bordeaux", cityAr: "بوردو", countryEn: "France", countryAr: "فرنسا", flag: "🇫🇷" },
+  { cityEn: "Toulouse", cityAr: "تولوز", countryEn: "France", countryAr: "فرنسا", flag: "🇫🇷" },
+
+  // Saudi Arabia
   { cityEn: "Riyadh", cityAr: "الرياض", countryEn: "Saudi Arabia", countryAr: "المملكة العربية السعودية", flag: "🇸🇦" },
   { cityEn: "Jeddah", cityAr: "جدة", countryEn: "Saudi Arabia", countryAr: "المملكة العربية السعودية", flag: "🇸🇦" },
   { cityEn: "Mecca", cityAr: "مكة", countryEn: "Saudi Arabia", countryAr: "المملكة العربية السعودية", flag: "🇸🇦" },
   { cityEn: "Medina", cityAr: "المدينة المنورة", countryEn: "Saudi Arabia", countryAr: "المملكة العربية السعودية", flag: "🇸🇦" },
+  { cityEn: "Dammam", cityAr: "الدمام", countryEn: "Saudi Arabia", countryAr: "المملكة العربية السعودية", flag: "🇸🇦" },
+  { cityEn: "Al-Ula", cityAr: "العلا", countryEn: "Saudi Arabia", countryAr: "المملكة العربية السعودية", flag: "🇸🇦" },
+
+  // United Arab Emirates
   { cityEn: "Dubai", cityAr: "دبي", countryEn: "United Arab Emirates", countryAr: "الإمارات العربية المتحدة", flag: "🇦🇪" },
   { cityEn: "Abu Dhabi", cityAr: "أبو ظبي", countryEn: "United Arab Emirates", countryAr: "الإمارات العربية المتحدة", flag: "🇦🇪" },
+  { cityEn: "Sharjah", cityAr: "الشارقة", countryEn: "United Arab Emirates", countryAr: "الإمارات العربية المتحدة", flag: "🇦🇪" },
+  { cityEn: "Al Ain", cityAr: "العين", countryEn: "United Arab Emirates", countryAr: "الإمارات العربية المتحدة", flag: "🇦🇪" },
+  { cityEn: "Ras Al Khaimah", cityAr: "رأس الخيمة", countryEn: "United Arab Emirates", countryAr: "الإمارات العربية المتحدة", flag: "🇦🇪" },
+
+  // Turkey
   { cityEn: "Istanbul", cityAr: "إسطنبول", countryEn: "Turkey", countryAr: "تركيا", flag: "🇹🇷" },
   { cityEn: "Antalya", cityAr: "أنطاليا", countryEn: "Turkey", countryAr: "تركيا", flag: "🇹🇷" },
   { cityEn: "Cappadocia", cityAr: "كبادوكيا", countryEn: "Turkey", countryAr: "تركيا", flag: "🇹🇷" },
+  { cityEn: "Ankara", cityAr: "أنقرة", countryEn: "Turkey", countryAr: "تركيا", flag: "🇹🇷" },
+  { cityEn: "Izmir", cityAr: "إزمير", countryEn: "Turkey", countryAr: "تركيا", flag: "🇹🇷" },
+
+  // Japan
   { cityEn: "Tokyo", cityAr: "طوكيو", countryEn: "Japan", countryAr: "اليابان", flag: "🇯🇵" },
   { cityEn: "Kyoto", cityAr: "كيوتو", countryEn: "Japan", countryAr: "اليابان", flag: "🇯🇵" },
+  { cityEn: "Osaka", cityAr: "أوساكا", countryEn: "Japan", countryAr: "اليابان", flag: "🇯🇵" },
+  { cityEn: "Hiroshima", cityAr: "هيروشيما", countryEn: "Japan", countryAr: "اليابان", flag: "🇯🇵" },
+  { cityEn: "Sapporo", cityAr: "سافورو", countryEn: "Japan", countryAr: "اليابان", flag: "🇯🇵" },
+
+  // United States
   { cityEn: "New York", cityAr: "نيويورك", countryEn: "United States", countryAr: "الولايات المتحدة الأمريكية", flag: "🇺🇸" },
   { cityEn: "Los Angeles", cityAr: "لوس أنجلوس", countryEn: "United States", countryAr: "الولايات المتحدة الأمريكية", flag: "🇺🇸" },
+  { cityEn: "Miami", cityAr: "ميامي", countryEn: "United States", countryAr: "الولايات المتحدة الأمريكية", flag: "🇺🇸" },
+  { cityEn: "San Francisco", cityAr: "سان فرانسيسكو", countryEn: "United States", countryAr: "الولايات المتحدة الأمريكية", flag: "🇺🇸" },
+  { cityEn: "Chicago", cityAr: "شيكاغو", countryEn: "United States", countryAr: "الولايات المتحدة الأمريكية", flag: "🇺🇸" },
+
+  // Spain
   { cityEn: "Madrid", cityAr: "مدريد", countryEn: "Spain", countryAr: "إسبانيا", flag: "🇪🇸" },
   { cityEn: "Barcelona", cityAr: "برشلونة", countryEn: "Spain", countryAr: "إسبانيا", flag: "🇪🇸" },
+  { cityEn: "Seville", cityAr: "إشبيلية", countryEn: "Spain", countryAr: "إسبانيا", flag: "🇪🇸" },
+  { cityEn: "Valencia", cityAr: "فالنسيا", countryEn: "Spain", countryAr: "إسبانيا", flag: "🇪🇸" },
+  { cityEn: "Granada", cityAr: "غرناطة", countryEn: "Spain", countryAr: "إسبانيا", flag: "🇪🇸" },
+
+  // Germany
   { cityEn: "Berlin", cityAr: "برلين", countryEn: "Germany", countryAr: "ألمانيا", flag: "🇩🇪" },
   { cityEn: "Munich", cityAr: "ميونخ", countryEn: "Germany", countryAr: "ألمانيا", flag: "🇩🇪" },
+  { cityEn: "Frankfurt", cityAr: "فرانكفورت", countryEn: "Germany", countryAr: "ألمانيا", flag: "🇩🇪" },
+  { cityEn: "Hamburg", cityAr: "هامبورغ", countryEn: "Germany", countryAr: "ألمانيا", flag: "🇩🇪" },
+  { cityEn: "Cologne", cityAr: "كولونيا", countryEn: "Germany", countryAr: "ألمانيا", flag: "🇩🇪" },
+
+  // Switzerland
   { cityEn: "Zurich", cityAr: "زيورخ", countryEn: "Switzerland", countryAr: "سويسرا", flag: "🇨🇭" },
   { cityEn: "Geneva", cityAr: "جنيف", countryEn: "Switzerland", countryAr: "سويسرا", flag: "🇨🇭" },
+  { cityEn: "Interlaken", cityAr: "إنترلاكن", countryEn: "Switzerland", countryAr: "سويسرا", flag: "🇨🇭" },
+  { cityEn: "Lucerne", cityAr: "لوسيرن", countryEn: "Switzerland", countryAr: "سويسرا", flag: "🇨🇭" },
+  { cityEn: "Basel", cityAr: "بازل", countryEn: "Switzerland", countryAr: "سويسرا", flag: "🇨🇭" },
 ];
 
 interface AIPlannerProps {
